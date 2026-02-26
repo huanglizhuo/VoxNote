@@ -1,29 +1,150 @@
-# Xcode User settings & Build Artifacts
-xcuserdata/
-*.hmap
-*.ipa
-*.dSYM.zip
-*.dSYM
-
+##############################################
+# macOS
+##############################################
 .DS_Store
+.AppleDouble
+.LSOverride
 
-*.xcworkspace/xcuserdata/
-*.xcuserdatad
+# Icon must end with two \r
+Icon?
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+##############################################
+# Xcode
+##############################################
+
+# Build results
+build/
+DerivedData/
+
+# Archives
+*.xcarchive
+
+# Xcode user data (DO NOT COMMIT)
+xcuserdata/
 *.xcuserstate
+*.xcscmblueprint
 
+# Workspace user data
+*.xcworkspace/xcuserdata/
 
-# Playgrounds & SwiftUI
+# SwiftPM
+.swiftpm/
+.build/
+
+# Playground
 timeline.xctimeline
 playground.xcworkspace
 
+##############################################
 # Swift Package Manager
-.swiftpm/
-.build/
+##############################################
+Packages/
 Package.resolved
 
-# Dependency Managers (Optional, based on team workflow)
-# Pods/
-# Carthage/Build/
+# Keep Package.resolved for apps, ignore for libraries if needed
+# (uncomment below for libraries)
+# Package.resolved
 
-# Fastlane/Other
-com.crashlytics.mac
+##############################################
+# CocoaPods
+##############################################
+
+# Pods directory (choose one strategy)
+# 1. Commit Pods (recommended for apps) -> comment next line
+# 2. Do NOT commit Pods (recommended for libraries) -> keep next line
+Pods/
+
+# Pod install logs
+*.lock
+
+# Keep Podfile.lock (important for reproducible builds)
+!Podfile.lock
+
+##############################################
+# Carthage
+##############################################
+Carthage/Build/
+
+##############################################
+# fastlane
+##############################################
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output/
+
+##############################################
+# Code signing / certificates
+##############################################
+*.p12
+*.cer
+*.mobileprovision
+*.provisionprofile
+
+##############################################
+# Logs
+##############################################
+*.log
+
+##############################################
+# Temporary files
+##############################################
+*.tmp
+*.temp
+
+##############################################
+# Editor / IDE
+##############################################
+
+# VSCode
+.vscode/
+
+# JetBrains (if you ever use)
+.idea/
+
+##############################################
+# Dependency managers
+##############################################
+
+# Mint
+.mint/
+
+##############################################
+# Test artifacts
+##############################################
+*.xccovreport
+*.xccovarchive
+
+##############################################
+# Misc
+##############################################
+.env
+.env.local
+.env.*.local
+
+##############################################
+# Firebase / Google
+##############################################
+GoogleService-Info.plist
+
+##############################################
+# Crashlytics
+##############################################
+fabric.properties
+
+##############################################
+# Danger
+##############################################
+danger.log
