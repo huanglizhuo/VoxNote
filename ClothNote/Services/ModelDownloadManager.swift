@@ -1,5 +1,7 @@
 import Foundation
 import MLXAudioSTT
+import MLXLLM
+import MLXLMCommon
 
 @MainActor
 class ModelDownloadManager: ObservableObject {
@@ -22,6 +24,11 @@ class ModelDownloadManager: ObservableObject {
     func checkDownloadedModels() {
         downloadedModels.removeAll()
         for model in ModelInfo.availableModels {
+            if isModelCached(repoID: model.repoID) {
+                downloadedModels.insert(model.id)
+            }
+        }
+        for model in ModelInfo.availableSummarizationModels {
             if isModelCached(repoID: model.repoID) {
                 downloadedModels.insert(model.id)
             }
@@ -56,20 +63,37 @@ class ModelDownloadManager: ObservableObject {
         downloadErrors[modelInfo.id] = nil
         downloadProgress[modelInfo.id] = 0
 
-        // Start file-system progress monitor
-        startProgressMonitor(for: modelInfo)
-
         do {
-            let _ = try await Task.detached {
-                try await Qwen3ASRModel.fromPretrained(modelInfo.repoID)
-            }.value
+            switch modelInfo.modelType {
+            case .asr:
+                // Start file-system progress monitor for ASR models
+                startProgressMonitor(for: modelInfo)
+                let _ = try await Task.detached {
+                    try await Qwen3ASRModel.fromPretrained(modelInfo.repoID)
+                }.value
+                stopProgressMonitor(for: modelInfo.id)
+
+            case .summarization:
+                // Use LLMModelFactory which provides real download progress callbacks
+                let config = ModelConfiguration(id: modelInfo.repoID)
+                let modelID = modelInfo.id
+                let _ = try await LLMModelFactory.shared.loadContainer(configuration: config) { [weak self] progress in
+                    Task { @MainActor [weak self] in
+                        guard let self, self.isDownloading[modelID] == true else { return }
+                        self.downloadProgress[modelID] = progress.fractionCompleted
+                    }
+                }
+            }
+
             downloadedModels.insert(modelInfo.id)
             downloadProgress[modelInfo.id] = 1.0
         } catch {
             downloadErrors[modelInfo.id] = error.localizedDescription
+            if modelInfo.modelType == .asr {
+                stopProgressMonitor(for: modelInfo.id)
+            }
         }
 
-        stopProgressMonitor(for: modelInfo.id)
         isDownloading[modelInfo.id] = false
     }
 
@@ -88,7 +112,7 @@ class ModelDownloadManager: ObservableObject {
         downloadProgress.removeValue(forKey: modelInfo.id)
     }
 
-    // MARK: - Progress Monitoring
+    // MARK: - Progress Monitoring (ASR only)
 
     /// Expected download sizes in bytes (approximate) for file-system progress tracking.
     private static let expectedSizes: [String: Int64] = [
@@ -102,6 +126,7 @@ class ModelDownloadManager: ObservableObject {
         "qwen3-asr-1.7b-6bit": 1_600_000_000,
         "qwen3-asr-1.7b-8bit": 2_000_000_000,
         "qwen3-asr-1.7b-bf16": 3_600_000_000,
+        "qwen3-1.7b-8bit": 1_900_000_000,
     ]
 
     private func startProgressMonitor(for modelInfo: ModelInfo) {

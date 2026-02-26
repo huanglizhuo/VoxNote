@@ -6,6 +6,7 @@ final class AppState {
     static let shared = AppState()
 
     let transcriptionEngine = TranscriptionEngine()
+    let summarizationEngine = SummarizationEngine()
     let downloadManager = ModelDownloadManager()
     let deviceManager = AudioDeviceManager()
     let captureService = AudioCaptureService()
@@ -22,6 +23,7 @@ struct ClothNoteApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(appState.transcriptionEngine)
+                .environmentObject(appState.summarizationEngine)
                 .environmentObject(appState.downloadManager)
                 .environmentObject(appState.deviceManager)
                 .environmentObject(appState.captureService)

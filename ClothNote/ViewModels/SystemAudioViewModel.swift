@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import Combine
+import SwiftUI
 
 @MainActor
 class SystemAudioViewModel: ObservableObject {
@@ -16,7 +17,7 @@ class SystemAudioViewModel: ObservableObject {
     let deviceManager: AudioDeviceManager
     let noteStore: NoteStore
 
-    private var currentRecordingNoteID: UUID?
+    private(set) var currentRecordingNoteID: UUID?
     private var autoSaveTask: Task<Void, Never>?
     private var cancellables = Set<AnyCancellable>()
 
@@ -57,7 +58,7 @@ class SystemAudioViewModel: ObservableObject {
         }
 
         do {
-            var note = Note(source: .systemAudio)
+            var note = Note(source: .systemAudio, deviceName: device.name)
             note.audioFileName = "\(note.id.uuidString).wav"
             noteStore.save(note)
             currentRecordingNoteID = note.id
@@ -120,19 +121,43 @@ class SystemAudioViewModel: ObservableObject {
         }
     }
 
-    func copyToClipboard() {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(transcriptionEngine.fullText, forType: .string)
+    /// Called by the view after recording stops to persist the Apple Translation results.
+    func saveTranslations(_ translations: [UUID: String], language: String, to noteID: UUID) {
+        guard !translations.isEmpty,
+              var note = noteStore.notes.first(where: { $0.id == noteID }) else { return }
+        note.segmentTranslations = Dictionary(uniqueKeysWithValues: translations.map { ($0.key.uuidString, $0.value) })
+        note.translationLanguage = language
+        noteStore.save(note)
     }
 
-    func exportAsText() {
+    func copyToClipboard(segmentTranslations: [UUID: String] = [:], showTranslation: Bool = false) {
+        let text = buildCopyText(translations: segmentTranslations, showTranslation: showTranslation)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+    }
+
+    func exportAsText(segmentTranslations: [UUID: String] = [:], showTranslation: Bool = false) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.plainText]
         panel.nameFieldStringValue = "transcription.txt"
 
         if panel.runModal() == .OK, let url = panel.url {
-            try? transcriptionEngine.fullText.write(to: url, atomically: true, encoding: .utf8)
+            try? buildCopyText(translations: segmentTranslations, showTranslation: showTranslation)
+                .write(to: url, atomically: true, encoding: .utf8)
         }
+    }
+
+    private func buildCopyText(translations: [UUID: String] = [:], showTranslation: Bool = false) -> String {
+        guard showTranslation && !translations.isEmpty else {
+            return transcriptionEngine.fullText
+        }
+        return transcriptionEngine.segments.map { segment in
+            var line = segment.text
+            if let translation = translations[segment.id] {
+                line += "\n" + translation
+            }
+            return line
+        }.joined(separator: "\n\n")
     }
 
     // MARK: - Auto-save
