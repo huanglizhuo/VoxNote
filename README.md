@@ -18,16 +18,17 @@ VoxNote is a macOS app for turning audio into clear notes.
    https://github.com/ExistentialAudio/BlackHole
 2. Open **Audio MIDI Setup** and create a **Multi-Output Device**.
 
-![Create Multi-Output Device](assets/blackhole-create-multi-output.png)
+<img src="assets/blackhole-create-multi-output.png" alt="Create Multi-Output Device" width="300" />
+
 
 3. In the Multi-Output Device settings, check **BlackHole 2ch** and your speaker/headphones output.
 
-![Multi-Output Device Settings](assets/blackhole-multi-output-options.png)
+<img src="assets/blackhole-multi-output-options.png" alt="Multi-Output Device Settings" width="300" />
 
 4. Set that Multi-Output Device as your macOS sound output.
 
-![Use Multi-Output for Sound Output](assets/blackhole-use-for-sound-output.png)
+<img src="assets/blackhole-use-for-sound-output.png" alt="Use Multi-Output for Sound Output" width="300" />
 
 5. Start VoxNote and select the created output device as the recording source.
 
-![VoxNote Screenshot](assets/screenshot.png)
+<img src="assets/screenshot.png" alt="VoxNote Screenshot" width="300" />

@@ -5,6 +5,8 @@ xcuserdata/
 *.dSYM.zip
 *.dSYM
 
+.DS_Store
+
 *.xcworkspace/xcuserdata/
 *.xcuserdatad
 *.xcuserstate
