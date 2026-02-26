@@ -2,9 +2,12 @@ import Foundation
 import AppKit
 import Combine
 import SwiftUI
+import AVFoundation
+import os.log
 
 @MainActor
 class SystemAudioViewModel: ObservableObject {
+    private let logger = Logger(subsystem: "com.voxnote", category: "SystemAudioViewModel")
     @Published var isRecording = false
     @Published var selectedDevice: AudioDevice?
     @Published var showSetupGuide = false
@@ -42,7 +45,7 @@ class SystemAudioViewModel: ObservableObject {
     }
 
     func startRecording() {
-        guard let device = selectedDevice else {
+        guard let device = resolvedInputDevice() else {
             error = "No audio device selected."
             return
         }
@@ -79,6 +82,28 @@ class SystemAudioViewModel: ObservableObject {
         }
     }
 
+    private func resolvedInputDevice() -> AudioDevice? {
+        guard let selectedDevice else { return nil }
+
+        // Device IDs can change when aggregate/multi-output devices are recreated.
+        if let exact = deviceManager.inputDevices.first(where: { $0.id == selectedDevice.id && $0.id != 0 }) {
+            logger.info("Using selected input device id=\(exact.id) name=\(exact.name, privacy: .public) sr=\(exact.sampleRate, format: .fixed(precision: 0)) in=\(exact.inputChannels) out=\(exact.outputChannels)")
+            return exact
+        }
+        if let byName = deviceManager.inputDevices.first(where: { $0.name == selectedDevice.name && $0.id != 0 }) {
+            self.selectedDevice = byName
+            logger.warning("Selected device id changed; remapped by name to id=\(byName.id) name=\(byName.name, privacy: .public)")
+            return byName
+        }
+        if let firstBlackHole = deviceManager.blackHoleDevices.first(where: { $0.id != 0 }) {
+            self.selectedDevice = firstBlackHole
+            logger.warning("Selected device missing; fallback to BlackHole id=\(firstBlackHole.id) name=\(firstBlackHole.name, privacy: .public)")
+            return firstBlackHole
+        }
+        logger.error("No valid input device available for recording")
+        return nil
+    }
+
     func stopRecording() {
         captureService.stop()
         transcriptionEngine.stopStreaming()
@@ -102,7 +127,9 @@ class SystemAudioViewModel: ObservableObject {
             if !engineSegments.isEmpty {
                 note.segments = engineSegments
             }
-            if let startDate {
+            if let audioDuration = measuredAudioDuration(for: note) {
+                note.duration = audioDuration
+            } else if let startDate {
                 note.duration = Date().timeIntervalSince(startDate)
             }
             noteStore.save(note)
@@ -111,6 +138,14 @@ class SystemAudioViewModel: ObservableObject {
         isRecording = false
         currentRecordingNoteID = nil
         recordingStartDate = nil
+    }
+
+    private func measuredAudioDuration(for note: Note) -> TimeInterval? {
+        guard let audioURL = noteStore.audioFileURL(for: note) else { return nil }
+        guard let file = try? AVAudioFile(forReading: audioURL) else { return nil }
+        let sampleRate = file.processingFormat.sampleRate
+        guard sampleRate > 0 else { return nil }
+        return Double(file.length) / sampleRate
     }
 
     func toggleRecording() {

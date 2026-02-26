@@ -156,11 +156,11 @@ struct NoteDetailView: View {
             }
 
             // Audio player
-            // if let audioURL = audioURL {
-            //     AudioPlayerBar(audioURL: audioURL)
-            //         .padding(.horizontal)
-            //         .padding(.bottom, 8)
-            // }
+            if let audioURL = audioURL {
+                AudioPlayerBar(audioURL: audioURL)
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+            }
 
             // Tab picker
             Picker("", selection: $selectedTab) {

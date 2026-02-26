@@ -40,7 +40,7 @@ class AudioNormalizer {
         var gain = targetPeak / globalMaxAmp
         
         // Limit maximum gain to prevent amplifying silence/background noise into loud static
-        let maxGain: Float = 15.0 // ~+23dB max boost
+        let maxGain: Float = 64.0 // ~+36dB max boost for very low BlackHole captures
         if gain > maxGain {
             gain = maxGain
         }
@@ -63,10 +63,11 @@ class AudioNormalizer {
             AVNumberOfChannelsKey: format.channelCount,
             AVLinearPCMBitDepthKey: 16,
             AVLinearPCMIsFloatKey: false,
-            AVLinearPCMIsBigEndianKey: false
+            AVLinearPCMIsBigEndianKey: false,
+            AVLinearPCMIsNonInterleaved: false
         ]
-        
-        let outFile = try AVAudioFile(forWriting: tempURL, settings: settings, commonFormat: .pcmFormatInt16, interleaved: false)
+
+        let outFile = try AVAudioFile(forWriting: tempURL, settings: settings, commonFormat: .pcmFormatInt16, interleaved: true)
         try outFile.write(from: buffer)
         
         // 4. Replace original file
