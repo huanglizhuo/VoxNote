@@ -1,6 +1,6 @@
 # VoxNote
 
-<img src="assets/AppIcon.png" alt="VoxNote App Icon" width="40" />
+<img src="assets/AppIcon.png" alt="VoxNote App Icon" width="100" />
 
 VoxNote is a macOS app for turning audio into clear notes.
 
