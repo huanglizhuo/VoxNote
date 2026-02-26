@@ -98,7 +98,7 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		C10000000000000000000001 /* ClothNote */ = {
+		C10000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
 				C10000000000000000000002 /* ClothNote */,
@@ -292,7 +292,7 @@
 				en,
 				Base,
 			);
-			mainGroup = C10000000000000000000001 /* ClothNote */;
+			mainGroup = C10000000000000000000001;
 			packageReferences = (
 				AA0000000000000000000001 /* XCRemoteSwiftPackageReference "mlx-audio-swift" */,
 			);
@@ -489,6 +489,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ClothNote/Info.plist;
@@ -519,6 +520,7 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = ClothNote/Info.plist;
