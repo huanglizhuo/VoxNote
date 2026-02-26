@@ -32,3 +32,14 @@ VoxNote is a macOS app for turning audio into clear notes.
 5. Start VoxNote and select the created output device as the recording source.
 
 <img src="assets/screenshot.png" alt="VoxNote Screenshot" width="600" />
+
+
+## TODOs
+
+- [ ] add blackhole usage guide UI
+- [ ] update UI style to be Liquid Glass
+- [ ] support customize the summary prompt
+- [ ] support word level timestamp hightlight for playing the record
+- [ ] support more mlx llm models
+- [ ] support system level shorcut to start/stop recording
+- [ ] support status bar menu
