@@ -36,10 +36,10 @@ VoxNote is a macOS app for turning audio into clear notes.
 
 ## TODOs
 
-- [ ] add blackhole usage guide UI
-- [ ] update UI style to be Liquid Glass
-- [ ] support customize the summary prompt
-- [ ] support word level timestamp hightlight for playing the record
-- [ ] support more mlx llm models
-- [ ] support system level shorcut to start/stop recording
-- [ ] support status bar menu
+- [ ] add blackhole usage guide UI.
+- [ ] refine UI.
+- [ ] support customize the summary prompt.
+- [ ] support word level timestamp hightlight for playing the record.
+- [ ] support more mlx llm models.
+- [ ] support system level shorcut to start/stop recording.
+- [ ] support status bar menu.
