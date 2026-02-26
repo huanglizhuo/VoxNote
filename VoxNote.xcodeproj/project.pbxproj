@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		39D91EAA57B39931EE5FDCBB /* AudioNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5131935C82452B95739B4905 /* AudioNormalizer.swift */; };
 		507AFE21F7514246DEE6BF21 /* SummarizationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D035557F404F2B462B40EEB /* SummarizationEngine.swift */; };
 		6E0EA98F9BA1E2568CC581E4 /* TranslationLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698FDA34FFFBA19A2733CE2C /* TranslationLanguage.swift */; };
 		AA0000000000000000000004 /* MLXAudioSTT in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000002 /* MLXAudioSTT */; };
@@ -46,6 +47,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		5131935C82452B95739B4905 /* AudioNormalizer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AudioNormalizer.swift; sourceTree = "<group>"; };
 		698FDA34FFFBA19A2733CE2C /* TranslationLanguage.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TranslationLanguage.swift; path = TranslationLanguage.swift; sourceTree = "<group>"; };
 		8D035557F404F2B462B40EEB /* SummarizationEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = SummarizationEngine.swift; path = SummarizationEngine.swift; sourceTree = "<group>"; };
 		A10000000000000000000001 /* VoxNoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoxNoteApp.swift; sourceTree = "<group>"; };
@@ -143,6 +145,7 @@
 				A10000000000000000000031 /* NoteStore.swift */,
 				A10000000000000000000035 /* AudioFileWriter.swift */,
 				8D035557F404F2B462B40EEB /* SummarizationEngine.swift */,
+				5131935C82452B95739B4905 /* AudioNormalizer.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -345,6 +348,7 @@
 				B10000000000000000000034 /* AudioPlayerBar.swift in Sources */,
 				6E0EA98F9BA1E2568CC581E4 /* TranslationLanguage.swift in Sources */,
 				507AFE21F7514246DEE6BF21 /* SummarizationEngine.swift in Sources */,
+				39D91EAA57B39931EE5FDCBB /* AudioNormalizer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

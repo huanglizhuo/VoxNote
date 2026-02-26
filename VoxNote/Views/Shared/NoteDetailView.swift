@@ -7,6 +7,7 @@ struct NoteDetailView: View {
     let noteStore: NoteStore
     let transcriptionEngine: TranscriptionEngine
     let summarizationEngine: SummarizationEngine
+    @EnvironmentObject var downloadManager: ModelDownloadManager
     @Binding var selection: SidebarSelection?
 
     @State private var isEditingTitle = false
@@ -23,6 +24,8 @@ struct NoteDetailView: View {
 
     // Summarization state
     @State private var isSummarizing = false
+    @State private var showDownloadSummarizationModelAlert = false
+    @State private var summarizationError: String?
 
     @AppStorage("translationTargetLanguage") private var translationTargetLanguage: String = TranslationLanguage.disabled.rawValue
 
@@ -142,14 +145,22 @@ struct NoteDetailView: View {
                 .background(.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 8))
                 .padding(.horizontal)
                 .padding(.bottom, 4)
+
+                if let err = summarizationError {
+                    Text(err)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .padding(.horizontal)
+                        .padding(.bottom, 4)
+                }
             }
 
             // Audio player
-            if let audioURL = audioURL {
-                AudioPlayerBar(audioURL: audioURL)
-                    .padding(.horizontal)
-                    .padding(.bottom, 8)
-            }
+            // if let audioURL = audioURL {
+            //     AudioPlayerBar(audioURL: audioURL)
+            //         .padding(.horizontal)
+            //         .padding(.bottom, 8)
+            // }
 
             // Tab picker
             Picker("", selection: $selectedTab) {
@@ -207,15 +218,25 @@ struct NoteDetailView: View {
 
                 // Summarize
                 Button {
-                    summarizeNote()
+                    handleSummarizeAction()
                 } label: {
-                    if isSummarizing {
+                    let modelID = ModelInfo.defaultSummarizationModel.id
+                    if downloadManager.isDownloading[modelID] == true {
+                        let progress = downloadManager.downloadProgress[modelID] ?? 0
+                        Label("Downloading: \(Int(progress * 100))%", systemImage: "arrow.down.circle")
+                    } else if summarizationEngine.loadingModel {
+                        Label("Loading model...", systemImage: "hourglass")
+                    } else if summarizationEngine.isSummarizing {
                         Label("Summarizing...", systemImage: "text.quote")
                     } else {
                         Label(note.summary == nil ? "Summarize" : "Re-summarize", systemImage: "text.quote")
                     }
                 }
-                .disabled(!summarizationEngine.isModelLoaded || isSummarizing)
+                .disabled(
+                    downloadManager.isDownloading[ModelInfo.defaultSummarizationModel.id] == true ||
+                    summarizationEngine.loadingModel ||
+                    summarizationEngine.isSummarizing
+                )
 
                 Button(role: .destructive) {
                     deleteNote()
@@ -240,6 +261,22 @@ struct NoteDetailView: View {
         }
         .onChange(of: note.segmentTranslations) {
             liveTranslations = note.segmentTranslations ?? [:]
+        }
+        .alert("Download Summarization Model?", isPresented: $showDownloadSummarizationModelAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Download") {
+                Task {
+                    await downloadManager.downloadModel(ModelInfo.defaultSummarizationModel)
+                    if downloadManager.downloadErrors[ModelInfo.defaultSummarizationModel.id] == nil {
+                        // Automatically proceed to load and summarize once downloaded
+                        summarizeNote()
+                    } else {
+                        summarizationError = "Failed to download model."
+                    }
+                }
+            }
+        } message: {
+            Text("The summarization model (\(ModelInfo.defaultSummarizationModel.sizeDescription)) needs to be downloaded first. Do you want to download it now?")
         }
     }
 
@@ -407,16 +444,34 @@ struct NoteDetailView: View {
 
     // MARK: - Summarization
 
+    private func handleSummarizeAction() {
+        let model = ModelInfo.defaultSummarizationModel
+        if !downloadManager.isDownloaded(model) {
+            showDownloadSummarizationModelAlert = true
+        } else {
+            summarizeNote()
+        }
+    }
+
     private func summarizeNote() {
         let text = note.segments?.map(\.text).joined(separator: " ") ?? note.content
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        isSummarizing = true
+
+        summarizationError = nil
+        
         Task {
-            let summary = try? await summarizationEngine.summarize(text: text)
-            var updated = note
-            updated.summary = summary
-            noteStore.save(updated)
-            isSummarizing = false
+            do {
+                if !summarizationEngine.isModelLoaded {
+                    try await summarizationEngine.loadModel(repoID: ModelInfo.defaultSummarizationModel.repoID)
+                }
+                
+                let summary = try await summarizationEngine.summarize(text: text)
+                var updated = note
+                updated.summary = summary
+                noteStore.save(updated)
+            } catch {
+                summarizationError = error.localizedDescription
+            }
         }
     }
 

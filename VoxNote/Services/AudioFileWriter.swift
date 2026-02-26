@@ -5,17 +5,29 @@ class AudioFileWriter {
     private var audioFile: AVAudioFile?
     private let format: AVAudioFormat
 
-    init(outputURL: URL) throws {
+    init(outputURL: URL, sampleRate: Double = 48000) throws {
+        // The internal buffer will work with float32 samples.
         guard let format = AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
-            sampleRate: 16000,
+            sampleRate: sampleRate,
             channels: 1,
             interleaved: false
         ) else {
             throw AudioFileWriterError.formatError
         }
+
+        // The file on disk will be written as standard 16-bit PCM.
+        let settings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVSampleRateKey: sampleRate,
+            AVNumberOfChannelsKey: 1,
+            AVLinearPCMBitDepthKey: 16,
+            AVLinearPCMIsFloatKey: false,
+            AVLinearPCMIsBigEndianKey: false
+        ]
+
         self.format = format
-        self.audioFile = try AVAudioFile(forWriting: outputURL, settings: format.settings)
+        self.audioFile = try AVAudioFile(forWriting: outputURL, settings: settings, commonFormat: .pcmFormatFloat32, interleaved: false)
     }
 
     func write(samples: [Float]) {
