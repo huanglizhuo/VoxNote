@@ -1,0 +1,29 @@
+# Xcode User settings & Build Artifacts
+xcuserdata/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+.DS_Store
+
+*.xcworkspace/xcuserdata/
+*.xcuserdatad
+*.xcuserstate
+
+
+# Playgrounds & SwiftUI
+timeline.xctimeline
+playground.xcworkspace
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Package.resolved
+
+# Dependency Managers (Optional, based on team workflow)
+# Pods/
+# Carthage/Build/
+
+# Fastlane/Other
+com.crashlytics.mac
