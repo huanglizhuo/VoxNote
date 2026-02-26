@@ -12,6 +12,7 @@ struct Note: Identifiable, Codable, Equatable {
     var refinedSegments: [TranscriptSegment]?
     var audioFileName: String?
     var refinedContent: String?
+    var refinedSegmentTranslations: [String: String]?  // refinedSegmentID.uuidString -> translated text
     var translationLanguage: String?
     var translatedRefinedContent: String?
     var segmentTranslations: [String: String]?  // segmentID.uuidString -> translated text
@@ -36,6 +37,7 @@ struct Note: Identifiable, Codable, Equatable {
         refinedSegments: [TranscriptSegment]? = nil,
         audioFileName: String? = nil,
         refinedContent: String? = nil,
+        refinedSegmentTranslations: [String: String]? = nil,
         translationLanguage: String? = nil,
         translatedRefinedContent: String? = nil,
         segmentTranslations: [String: String]? = nil,
@@ -53,6 +55,7 @@ struct Note: Identifiable, Codable, Equatable {
         self.refinedSegments = refinedSegments
         self.audioFileName = audioFileName
         self.refinedContent = refinedContent
+        self.refinedSegmentTranslations = refinedSegmentTranslations
         self.translationLanguage = translationLanguage
         self.translatedRefinedContent = translatedRefinedContent
         self.segmentTranslations = segmentTranslations

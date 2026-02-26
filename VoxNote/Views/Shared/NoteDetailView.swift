@@ -21,6 +21,8 @@ struct NoteDetailView: View {
     @State private var showTranslation = false
     @State private var translateError: String?
     @State private var liveTranslations: [String: String] = [:]
+    @State private var liveRefinedSegmentTranslations: [String: String] = [:]
+    @State private var liveRefinedTranslation = ""
     @State private var translationConfig: TranslationSession.Configuration?
 
     // Summarization state
@@ -38,12 +40,31 @@ struct NoteDetailView: View {
         note.segmentTranslations ?? [:]
     }
 
+    private var savedRefinedSegmentTranslations: [String: String] {
+        note.refinedSegmentTranslations ?? [:]
+    }
+
     private var effectiveTranslations: [String: String] {
         liveTranslations.isEmpty ? savedTranslations : liveTranslations
     }
 
+    private var effectiveRefinedSegmentTranslations: [String: String] {
+        liveRefinedSegmentTranslations.isEmpty ? savedRefinedSegmentTranslations : liveRefinedSegmentTranslations
+    }
+
+    private var effectiveRefinedTranslation: String {
+        if !liveRefinedTranslation.isEmpty {
+            return liveRefinedTranslation
+        }
+        return note.translatedRefinedContent ?? ""
+    }
+
     private var hasTranslations: Bool {
-        !effectiveTranslations.isEmpty || note.translatedRefinedContent != nil
+        !effectiveTranslations.isEmpty || !effectiveRefinedTranslation.isEmpty
+    }
+
+    private var isTargetLanguageEnabled: Bool {
+        (TranslationLanguage(rawValue: translationTargetLanguage) ?? .disabled) != .disabled
     }
 
     private var translationLanguageDisplay: String {
@@ -56,9 +77,19 @@ struct NoteDetailView: View {
     private var activeTabContent: String {
         if selectedTab == 1 {
             if let refinedSegments = note.refinedSegments, !refinedSegments.isEmpty {
-                return refinedSegments.map { "[\($0.formattedTimestamp)] \($0.text)" }.joined(separator: "\n")
+                let base = refinedSegments.map { segment in
+                    var line = "[\(segment.formattedTimestamp)] \(segment.text)"
+                    if showTranslation,
+                       let translated = effectiveRefinedSegmentTranslations[segment.id.uuidString],
+                       !translated.isEmpty {
+                        line += "\n\(translated)"
+                    }
+                    return line
+                }.joined(separator: "\n\n")
+                return base
             }
-            if showTranslation, let t = note.translatedRefinedContent {
+            if showTranslation, !effectiveRefinedTranslation.isEmpty {
+                let t = effectiveRefinedTranslation
                 let original = note.refinedContent ?? ""
                 return original.isEmpty ? t : original + "\n\n---\n\n" + t
             }
@@ -255,16 +286,30 @@ struct NoteDetailView: View {
             do {
                 try await session.prepareTranslation()
             } catch {
-                translateError = error.localizedDescription
-                return
+                // Preflight can fail transiently (e.g. TranslationErrorDomain Code=21).
+                // Try the real translation call anyway.
+                translateError = "Preflight failed, retrying translation..."
             }
             await performTranslation(session: session)
         }
         .onAppear {
             liveTranslations = note.segmentTranslations ?? [:]
+            liveRefinedSegmentTranslations = note.refinedSegmentTranslations ?? [:]
+            liveRefinedTranslation = note.translatedRefinedContent ?? ""
+            showTranslation = isTargetLanguageEnabled
         }
         .onChange(of: note.segmentTranslations) {
             liveTranslations = note.segmentTranslations ?? [:]
+        }
+        .onChange(of: note.refinedSegmentTranslations) {
+            liveRefinedSegmentTranslations = note.refinedSegmentTranslations ?? [:]
+        }
+        .onChange(of: note.translatedRefinedContent) {
+            liveRefinedTranslation = note.translatedRefinedContent ?? ""
+        }
+        .onChange(of: translationTargetLanguage) { _, newValue in
+            let selected = TranslationLanguage(rawValue: newValue) ?? .disabled
+            showTranslation = selected != .disabled
         }
         .alert("Download Summarization Model?", isPresented: $showDownloadSummarizationModelAlert) {
             Button("Cancel", role: .cancel) { }
@@ -354,7 +399,12 @@ struct NoteDetailView: View {
                     if let refinedSegments = note.refinedSegments, !refinedSegments.isEmpty {
                         LazyVStack(alignment: .leading, spacing: 6) {
                             ForEach(refinedSegments) { segment in
-                                refinedSegmentRow(segment)
+                                refinedSegmentRow(
+                                    segment,
+                                    translation: showTranslation
+                                        ? effectiveRefinedSegmentTranslations[segment.id.uuidString]
+                                        : nil
+                                )
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -364,17 +414,6 @@ struct NoteDetailView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
-                    if showTranslation {
-                        if let translation = note.translatedRefinedContent {
-                            Divider()
-                            Text("Translation (\(translationLanguageDisplay))")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Text(translation)
-                                .textSelection(.enabled)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
                 }
                 .padding()
             } else if audioURL == nil {
@@ -421,12 +460,56 @@ struct NoteDetailView: View {
         guard let lang = TranslationLanguage(rawValue: translationTargetLanguage),
               lang != .disabled,
               let localeLanguage = lang.localeLanguage else { return }
-        translationConfig = TranslationSession.Configuration(source: nil, target: localeLanguage)
+        // Force translationTask to rerun even when language is unchanged.
+        translationConfig = nil
+        DispatchQueue.main.async {
+            translationConfig = TranslationSession.Configuration(source: nil, target: localeLanguage)
+        }
     }
 
     private func performTranslation(session: TranslationSession) async {
         liveTranslations = [:]
+        liveRefinedSegmentTranslations = [:]
         translateError = nil
+
+        if selectedTab == 1, let refinedSegments = note.refinedSegments, !refinedSegments.isEmpty {
+            let requests = refinedSegments.map {
+                TranslationSession.Request(sourceText: $0.text, clientIdentifier: $0.id.uuidString)
+            }
+            do {
+                var translatedByID: [String: String] = [:]
+                for try await response in session.translate(batch: requests) {
+                    if let key = response.clientIdentifier {
+                        translatedByID[key] = response.targetText
+                    }
+                }
+                liveRefinedSegmentTranslations = translatedByID
+                liveRefinedTranslation = refinedSegments.compactMap { translatedByID[$0.id.uuidString] }.joined(separator: "\n")
+                var updated = note
+                updated.refinedSegmentTranslations = translatedByID
+                updated.translatedRefinedContent = liveRefinedTranslation
+                updated.translationLanguage = translationTargetLanguage
+                noteStore.save(updated)
+                showTranslation = true
+            } catch {
+                translateError = error.localizedDescription
+            }
+            return
+        }
+        if selectedTab == 1, let refined = note.refinedContent, !refined.isEmpty {
+            do {
+                let response = try await session.translate(refined)
+                liveRefinedTranslation = response.targetText
+                var updated = note
+                updated.translatedRefinedContent = response.targetText
+                updated.translationLanguage = translationTargetLanguage
+                noteStore.save(updated)
+                showTranslation = true
+            } catch {
+                translateError = error.localizedDescription
+            }
+            return
+        }
 
         if let segments = note.segments, !segments.isEmpty {
             let requests = segments.map {
@@ -501,6 +584,8 @@ struct NoteDetailView: View {
                 var updated = note
                 updated.refinedContent = result.text
                 updated.refinedSegments = result.segments
+                updated.refinedSegmentTranslations = nil
+                updated.translatedRefinedContent = nil
                 noteStore.save(updated)
                 isRefining = false
             } catch {
@@ -510,20 +595,30 @@ struct NoteDetailView: View {
         }
     }
 
-    private func refinedSegmentRow(_ segment: TranscriptSegment) -> some View {
+    private func refinedSegmentRow(_ segment: TranscriptSegment, translation: String?) -> some View {
         Button {
             seekRequestTime = segment.timestamp
         } label: {
-            HStack(alignment: .top, spacing: 8) {
-                Text(segment.formattedTimestamp)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                    .frame(width: 52, alignment: .leading)
-                Text(segment.text)
-                    .foregroundStyle(.primary)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .top, spacing: 8) {
+                    Text(segment.formattedTimestamp)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .frame(width: 52, alignment: .leading)
+                    Text(segment.text)
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                if let translation, !translation.isEmpty {
+                    Text(translation)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, 60)
+                }
             }
             .contentShape(Rectangle())
         }
