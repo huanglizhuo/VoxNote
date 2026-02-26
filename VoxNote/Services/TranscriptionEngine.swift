@@ -35,6 +35,7 @@ class TranscriptionEngine: ObservableObject {
     private var lastFormattedConfirmed = ""
     private var lastSegmentedLength = 0
     private var recordingStartDate: Date?
+    private let fileASRSampleRate = 16_000
 
     // MARK: - Model Loading
 
@@ -75,8 +76,9 @@ class TranscriptionEngine: ObservableObject {
         defer { isTranscribing = false }
 
         let capturedModel = model
+        let targetSampleRate = fileASRSampleRate
         let output = try await Task.detached {
-            let (_, audio) = try loadAudioArray(from: url)
+            let (_, audio) = try loadAudioArray(from: url, sampleRate: targetSampleRate)
             let params = STTGenerateParameters(language: language)
             return capturedModel.generate(audio: audio, generationParameters: params)
         }.value
@@ -96,8 +98,9 @@ class TranscriptionEngine: ObservableObject {
         provisionalText = ""
 
         let capturedModel = model
+        let targetSampleRate = fileASRSampleRate
         let (audio, stream) = try await Task.detached {
-            let (_, audio) = try loadAudioArray(from: url)
+            let (_, audio) = try loadAudioArray(from: url, sampleRate: targetSampleRate)
             let params = STTGenerateParameters(language: language)
             let stream = capturedModel.generateStream(audio: audio, generationParameters: params)
             return (audio, stream)
