@@ -15,6 +15,7 @@ struct NoteDetailView: View {
     @State private var selectedTab = 0
     @State private var isRefining = false
     @State private var refineError: String?
+    @State private var seekRequestTime: TimeInterval?
 
     // Translation state
     @State private var showTranslation = false
@@ -54,6 +55,9 @@ struct NoteDetailView: View {
 
     private var activeTabContent: String {
         if selectedTab == 1 {
+            if let refinedSegments = note.refinedSegments, !refinedSegments.isEmpty {
+                return refinedSegments.map { "[\($0.formattedTimestamp)] \($0.text)" }.joined(separator: "\n")
+            }
             if showTranslation, let t = note.translatedRefinedContent {
                 let original = note.refinedContent ?? ""
                 return original.isEmpty ? t : original + "\n\n---\n\n" + t
@@ -157,7 +161,7 @@ struct NoteDetailView: View {
 
             // Audio player
             if let audioURL = audioURL {
-                AudioPlayerBar(audioURL: audioURL)
+                AudioPlayerBar(audioURL: audioURL, seekRequest: $seekRequestTime)
                     .padding(.horizontal)
                     .padding(.bottom, 8)
             }
@@ -347,9 +351,18 @@ struct NoteDetailView: View {
                 .padding()
             } else if let refined = note.refinedContent, !refined.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text(refined)
-                        .textSelection(.enabled)
+                    if let refinedSegments = note.refinedSegments, !refinedSegments.isEmpty {
+                        LazyVStack(alignment: .leading, spacing: 6) {
+                            ForEach(refinedSegments) { segment in
+                                refinedSegmentRow(segment)
+                            }
+                        }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Text(refined)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
 
                     if showTranslation {
                         if let translation = note.translatedRefinedContent {
@@ -484,9 +497,10 @@ struct NoteDetailView: View {
 
         Task {
             do {
-                let result = try await transcriptionEngine.transcribeFile(url: audioURL)
+                let result = try await transcriptionEngine.transcribeFileWithForcedAlignment(url: audioURL)
                 var updated = note
-                updated.refinedContent = result
+                updated.refinedContent = result.text
+                updated.refinedSegments = result.segments
                 noteStore.save(updated)
                 isRefining = false
             } catch {
@@ -494,6 +508,26 @@ struct NoteDetailView: View {
                 isRefining = false
             }
         }
+    }
+
+    private func refinedSegmentRow(_ segment: TranscriptSegment) -> some View {
+        Button {
+            seekRequestTime = segment.timestamp
+        } label: {
+            HStack(alignment: .top, spacing: 8) {
+                Text(segment.formattedTimestamp)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .frame(width: 52, alignment: .leading)
+                Text(segment.text)
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func commitRename() {

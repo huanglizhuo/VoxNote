@@ -9,6 +9,7 @@ struct Note: Identifiable, Codable, Equatable {
     var updatedAt: Date
     var duration: TimeInterval
     var segments: [TranscriptSegment]?
+    var refinedSegments: [TranscriptSegment]?
     var audioFileName: String?
     var refinedContent: String?
     var translationLanguage: String?
@@ -32,6 +33,7 @@ struct Note: Identifiable, Codable, Equatable {
         updatedAt: Date = Date(),
         duration: TimeInterval = 0,
         segments: [TranscriptSegment]? = nil,
+        refinedSegments: [TranscriptSegment]? = nil,
         audioFileName: String? = nil,
         refinedContent: String? = nil,
         translationLanguage: String? = nil,
@@ -48,6 +50,7 @@ struct Note: Identifiable, Codable, Equatable {
         self.updatedAt = updatedAt
         self.duration = duration
         self.segments = segments
+        self.refinedSegments = refinedSegments
         self.audioFileName = audioFileName
         self.refinedContent = refinedContent
         self.translationLanguage = translationLanguage

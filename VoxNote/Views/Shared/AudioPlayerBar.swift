@@ -3,12 +3,18 @@ import AVFoundation
 
 struct AudioPlayerBar: View {
     let audioURL: URL
+    @Binding var seekRequest: TimeInterval?
 
     @State private var player: AVAudioPlayer?
     @State private var isPlaying = false
     @State private var progress: Double = 0
     @State private var duration: TimeInterval = 0
     @State private var timer: Timer?
+
+    init(audioURL: URL, seekRequest: Binding<TimeInterval?> = .constant(nil)) {
+        self.audioURL = audioURL
+        self._seekRequest = seekRequest
+    }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -42,6 +48,11 @@ struct AudioPlayerBar: View {
         .onChange(of: audioURL) {
             stopPlayback()
             setupPlayer()
+        }
+        .onChange(of: seekRequest) { _, newValue in
+            guard let newValue else { return }
+            seek(to: newValue)
+            seekRequest = nil
         }
     }
 
@@ -80,6 +91,13 @@ struct AudioPlayerBar: View {
         player?.stop()
         stopTimer()
         isPlaying = false
+    }
+
+    private func seek(to time: TimeInterval) {
+        guard let player else { return }
+        let clamped = max(0, min(time, max(player.duration, 0)))
+        player.currentTime = clamped
+        progress = clamped
     }
 
     private func startTimer() {

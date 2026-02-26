@@ -36,6 +36,7 @@ class TranscriptionEngine: ObservableObject {
     private var lastSegmentedLength = 0
     private var recordingStartDate: Date?
     private let fileASRSampleRate = 16_000
+    private let forcedAlignerRepoID = "mlx-community/Qwen3-ForcedAligner-0.6B-8bit"
 
     // MARK: - Model Loading
 
@@ -86,6 +87,41 @@ class TranscriptionEngine: ObservableObject {
         tokensPerSecond = output.generationTps
         confirmedText = TranscriptFormatter.applyLineBreaks(to: output.text)
         return confirmedText
+    }
+
+    func transcribeFileWithForcedAlignment(
+        url: URL,
+        language: String = "auto",
+        alignerLanguage: String = "English"
+    ) async throws -> (text: String, segments: [TranscriptSegment]) {
+        guard let model else { throw TranscriptionError.modelNotLoaded }
+
+        isTranscribing = true
+        confirmedText = ""
+        provisionalText = ""
+
+        defer { isTranscribing = false }
+
+        let capturedModel = model
+        let targetSampleRate = fileASRSampleRate
+        let (output, audio) = try await Task.detached {
+            let (_, audio) = try loadAudioArray(from: url, sampleRate: targetSampleRate)
+            let params = STTGenerateParameters(language: language)
+            let output = capturedModel.generate(audio: audio, generationParameters: params)
+            return (output, audio)
+        }.value
+
+        tokensPerSecond = output.generationTps
+        let formattedText = TranscriptFormatter.applyLineBreaks(to: output.text)
+        confirmedText = formattedText
+
+        let alignerRepo = forcedAlignerRepoID
+        let alignment = try await Task.detached {
+            let aligner = try await Qwen3ForcedAlignerModel.fromPretrained(alignerRepo)
+            return aligner.generate(audio: audio, text: formattedText, language: alignerLanguage)
+        }.value
+
+        return (text: formattedText, segments: alignedSegments(from: alignment.items))
     }
 
     // MARK: - File Transcription (Streaming tokens)
@@ -300,6 +336,49 @@ class TranscriptionEngine: ObservableObject {
             }
         }
         lastSegmentedLength = rawConfirmed.count
+    }
+
+    private func alignedSegments(from items: [ForcedAlignItem]) -> [TranscriptSegment] {
+        guard !items.isEmpty else { return [] }
+
+        var segments: [TranscriptSegment] = []
+        var currentWords: [String] = []
+        var currentStart: TimeInterval?
+        var lastEnd: TimeInterval = 0
+
+        func flushCurrent() {
+            guard let start = currentStart else { return }
+            let text = currentWords.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else {
+                currentWords = []
+                currentStart = nil
+                return
+            }
+            segments.append(TranscriptSegment(timestamp: start, text: text))
+            currentWords = []
+            currentStart = nil
+        }
+
+        for item in items {
+            let cleaned = item.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !cleaned.isEmpty else { continue }
+
+            if currentStart == nil {
+                currentStart = item.startTime
+            }
+
+            let gap = item.startTime - lastEnd
+            if !currentWords.isEmpty && (currentWords.count >= 10 || gap > 1.5) {
+                flushCurrent()
+                currentStart = item.startTime
+            }
+
+            currentWords.append(cleaned)
+            lastEnd = item.endTime
+        }
+
+        flushCurrent()
+        return segments
     }
 
     // MARK: - Helpers
