@@ -11,6 +11,11 @@ struct Note: Identifiable, Codable, Equatable {
     var segments: [TranscriptSegment]?
     var audioFileName: String?
     var refinedContent: String?
+    var translationLanguage: String?
+    var translatedRefinedContent: String?
+    var segmentTranslations: [String: String]?  // segmentID.uuidString -> translated text
+    var summary: String?
+    var deviceName: String?  // name of the input device used for this recording
 
     var preview: String {
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -28,7 +33,12 @@ struct Note: Identifiable, Codable, Equatable {
         duration: TimeInterval = 0,
         segments: [TranscriptSegment]? = nil,
         audioFileName: String? = nil,
-        refinedContent: String? = nil
+        refinedContent: String? = nil,
+        translationLanguage: String? = nil,
+        translatedRefinedContent: String? = nil,
+        segmentTranslations: [String: String]? = nil,
+        summary: String? = nil,
+        deviceName: String? = nil
     ) {
         self.id = id
         self.title = title ?? Self.defaultTitle(for: createdAt)
@@ -40,6 +50,11 @@ struct Note: Identifiable, Codable, Equatable {
         self.segments = segments
         self.audioFileName = audioFileName
         self.refinedContent = refinedContent
+        self.translationLanguage = translationLanguage
+        self.translatedRefinedContent = translatedRefinedContent
+        self.segmentTranslations = segmentTranslations
+        self.summary = summary
+        self.deviceName = deviceName
     }
 
     private static func defaultTitle(for date: Date) -> String {

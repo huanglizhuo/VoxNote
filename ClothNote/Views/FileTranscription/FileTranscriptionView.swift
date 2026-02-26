@@ -1,7 +1,13 @@
 import SwiftUI
+import Translation
 
 struct FileTranscriptionView: View {
     @ObservedObject var viewModel: FileTranscriptionViewModel
+
+    @State private var translationText = ""
+    @State private var showTranslation = false
+    @State private var translationConfig: TranslationSession.Configuration?
+    @AppStorage("translationTargetLanguage") private var translationTargetLanguage: String = TranslationLanguage.disabled.rawValue
 
     var body: some View {
         VStack(spacing: 0) {
@@ -24,6 +30,8 @@ struct FileTranscriptionView: View {
                     Button {
                         Task {
                             await viewModel.transcribe()
+                            translationText = ""
+                            showTranslation = false
                         }
                     } label: {
                         Label("Transcribe", systemImage: "waveform")
@@ -46,6 +54,24 @@ struct FileTranscriptionView: View {
                             .foregroundStyle(.secondary)
                             .monospacedDigit()
                     }
+
+                    // Translation controls (only when transcription is done)
+                    if !viewModel.transcriptionText.isEmpty {
+                        Picker("", selection: $translationTargetLanguage) {
+                            ForEach(TranslationLanguage.allCases.filter { $0 != .disabled }) { lang in
+                                Text(lang.displayName).tag(lang.rawValue)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: 110)
+
+                        Button {
+                            triggerTranslation()
+                        } label: {
+                            Label(translationText.isEmpty ? "Translate" : "Re-translate", systemImage: "character.bubble")
+                        }
+                        .disabled(translationTargetLanguage == TranslationLanguage.disabled.rawValue)
+                    }
                 }
 
                 if let error = viewModel.error {
@@ -58,9 +84,9 @@ struct FileTranscriptionView: View {
 
             Divider()
 
-            // Transcript
+            // Transcript + optional translation
             ScrollView {
-                VStack(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 12) {
                     if viewModel.transcriptionText.isEmpty && !viewModel.isTranscribing {
                         Text("Transcript will appear here after processing.")
                             .foregroundStyle(.tertiary)
@@ -75,6 +101,16 @@ struct FileTranscriptionView: View {
                     } else {
                         Text(viewModel.transcriptionText)
                             .textSelection(.enabled)
+
+                        if showTranslation && !translationText.isEmpty {
+                            Divider()
+                            Text("Translation")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text(translationText)
+                                .textSelection(.enabled)
+                                .foregroundStyle(.secondary.opacity(0.85))
+                        }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -102,8 +138,34 @@ struct FileTranscriptionView: View {
                 .disabled(viewModel.transcriptionText.isEmpty)
 
                 Spacer()
+
+                if !translationText.isEmpty {
+                    Toggle(isOn: $showTranslation) {
+                        Label("Translation", systemImage: "character.bubble")
+                    }
+                    .toggleStyle(.button)
+                }
             }
             .padding()
         }
+        .translationTask(translationConfig) { session in
+            defer { translationConfig = nil }
+            do {
+                try await session.prepareTranslation()
+            } catch {
+                return
+            }
+            if let response = try? await session.translate(viewModel.transcriptionText) {
+                translationText = response.targetText
+                showTranslation = !translationText.isEmpty
+            }
+        }
+    }
+
+    private func triggerTranslation() {
+        guard let lang = TranslationLanguage(rawValue: translationTargetLanguage),
+              lang != .disabled,
+              let localeLanguage = lang.localeLanguage else { return }
+        translationConfig = TranslationSession.Configuration(source: nil, target: localeLanguage)
     }
 }

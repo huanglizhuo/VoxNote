@@ -22,25 +22,61 @@ struct ModelManagerView: View {
             Divider()
 
             ScrollView {
-                VStack(spacing: 12) {
-                    ForEach(viewModel.models) { model in
-                        ModelCardView(
-                            model: model,
-                            isSelected: viewModel.selectedModelID == model.id,
-                            isDownloaded: downloadManager.isDownloaded(model),
-                            isDownloading: downloadManager.isDownloading[model.id] == true,
-                            downloadProgress: downloadManager.downloadProgress[model.id] ?? 0,
-                            downloadError: downloadManager.downloadErrors[model.id],
-                            onSelect: {
-                                Task { await viewModel.selectModel(model) }
-                            },
-                            onDownload: {
-                                Task { await viewModel.downloadModel(model) }
-                            },
-                            onDelete: {
-                                viewModel.deleteModel(model)
-                            }
-                        )
+                VStack(alignment: .leading, spacing: 16) {
+                    // ASR Models section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("ASR Models")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 4)
+
+                        ForEach(viewModel.models) { model in
+                            ModelCardView(
+                                model: model,
+                                isSelected: viewModel.selectedModelID == model.id,
+                                isDownloaded: downloadManager.isDownloaded(model),
+                                isDownloading: downloadManager.isDownloading[model.id] == true,
+                                downloadProgress: downloadManager.downloadProgress[model.id] ?? 0,
+                                downloadError: downloadManager.downloadErrors[model.id],
+                                onSelect: {
+                                    Task { await viewModel.selectModel(model) }
+                                },
+                                onDownload: {
+                                    Task { await viewModel.downloadModel(model) }
+                                },
+                                onDelete: {
+                                    viewModel.deleteModel(model)
+                                }
+                            )
+                        }
+                    }
+
+                    Divider()
+
+                    // Summarization Models section
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Summarization Models")
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 4)
+
+                        ForEach(viewModel.summarizationModels) { model in
+                            ModelCardView(
+                                model: model,
+                                isSelected: false,
+                                isDownloaded: downloadManager.isDownloaded(model),
+                                isDownloading: downloadManager.isDownloading[model.id] == true,
+                                downloadProgress: downloadManager.downloadProgress[model.id] ?? 0,
+                                downloadError: downloadManager.downloadErrors[model.id],
+                                onSelect: nil,
+                                onDownload: {
+                                    Task { await viewModel.downloadModel(model) }
+                                },
+                                onDelete: {
+                                    viewModel.deleteModel(model)
+                                }
+                            )
+                        }
                     }
                 }
                 .padding()
@@ -48,27 +84,69 @@ struct ModelManagerView: View {
 
             Divider()
 
-            HStack {
-                if viewModel.transcriptionEngine.loadingModel {
-                    ProgressView()
-                        .controlSize(.small)
-                    Text("Loading model...")
-                        .foregroundStyle(.secondary)
-                } else if viewModel.transcriptionEngine.isModelLoaded {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                    Text("Model ready: \(viewModel.selectedModel?.name ?? "Unknown")")
-                        .foregroundStyle(.secondary)
-                } else {
-                    Image(systemName: "circle.dashed")
-                        .foregroundStyle(.secondary)
-                    Text("No model loaded")
-                        .foregroundStyle(.secondary)
+            // Status bar
+            VStack(spacing: 4) {
+                HStack {
+                    asrStatusView
+                    Spacer()
                 }
-                Spacer()
+                HStack {
+                    summarizationStatusView
+                    Spacer()
+                }
             }
             .font(.caption)
             .padding()
+        }
+    }
+
+    // MARK: - Status Views
+
+    private var asrStatusView: some View {
+        Group {
+            if viewModel.transcriptionEngine.loadingModel {
+                HStack(spacing: 4) {
+                    ProgressView().controlSize(.mini)
+                    Text("Loading ASR model...")
+                        .foregroundStyle(.secondary)
+                }
+            } else if viewModel.transcriptionEngine.isModelLoaded {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                    Text("ASR model ready: \(viewModel.selectedModel?.name ?? "Unknown")")
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                HStack(spacing: 4) {
+                    Image(systemName: "circle.dashed").foregroundStyle(.secondary)
+                    Text("No ASR model loaded")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var summarizationStatusView: some View {
+        Group {
+            if viewModel.summarizationEngine.loadingModel {
+                HStack(spacing: 4) {
+                    ProgressView().controlSize(.mini)
+                    Text("Loading summarization model...")
+                        .foregroundStyle(.secondary)
+                }
+            } else if viewModel.summarizationEngine.isModelLoaded {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                    Text("Summarization model ready: \(ModelInfo.defaultSummarizationModel.name)")
+                        .foregroundStyle(.secondary)
+                }
+            } else {
+                HStack(spacing: 4) {
+                    Image(systemName: "circle.dashed").foregroundStyle(.secondary)
+                    Text("No summarization model loaded")
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
     }
 }

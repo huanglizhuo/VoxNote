@@ -1,8 +1,7 @@
 import SwiftUI
 
 enum SidebarSelection: Hashable {
-    case systemAudio
-    case microphone
+    case voxRecord
     case fileTranscription
     case modelManager
     case note(UUID)
@@ -16,11 +15,30 @@ struct SidebarView: View {
     var body: some View {
         List(selection: $selection) {
             Section("Recording") {
-                recordingRow(.systemAudio, label: "System Audio", icon: "speaker.wave.3")
-                recordingRow(.microphone, label: "Microphone", icon: "mic")
+                HStack {
+                    Label("Vox Record", systemImage: "waveform.and.mic")
+                    Spacer()
+                    if transcriptionEngine.activeSource != nil {
+                        Circle()
+                            .fill(.red)
+                            .frame(width: 8, height: 8)
+                    }
+                }
+                .tag(SidebarSelection.voxRecord)
             }
 
-            Section("Recorded Notes") {
+            
+            Section("Import") {
+                Label("File Transcription", systemImage: "doc.text")
+                    .tag(SidebarSelection.fileTranscription)
+            }
+
+            Section("Settings") {
+                Label("Model Manager", systemImage: "arrow.down.circle")
+                    .tag(SidebarSelection.modelManager)
+            }
+            
+            Section("Recorded Vox Notes") {
                 if noteStore.notes.isEmpty {
                     Text("No notes yet")
                         .foregroundStyle(.tertiary)
@@ -38,15 +56,6 @@ struct SidebarView: View {
                 }
             }
 
-            Section("Import") {
-                Label("File Transcription", systemImage: "doc.text")
-                    .tag(SidebarSelection.fileTranscription)
-            }
-
-            Section("Settings") {
-                Label("Model Manager", systemImage: "arrow.down.circle")
-                    .tag(SidebarSelection.modelManager)
-            }
         }
         .listStyle(.sidebar)
     }
@@ -56,24 +65,10 @@ struct SidebarView: View {
     }
 
     @ViewBuilder
-    private func recordingRow(_ item: SidebarSelection, label: String, icon: String) -> some View {
-        HStack {
-            Label(label, systemImage: icon)
-            Spacer()
-            if isSourceRecording(item) {
-                Circle()
-                    .fill(.red)
-                    .frame(width: 8, height: 8)
-            }
-        }
-        .tag(item)
-    }
-
-    @ViewBuilder
     private func noteRow(_ note: Note) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
-                Image(systemName: note.source == .microphone ? "mic" : "speaker.wave.3")
+                Image(systemName: note.source == .microphone ? "mic" : "waveform.and.mic")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 Text(note.title)
@@ -106,17 +101,6 @@ struct SidebarView: View {
             selection = nil
         }
         noteStore.delete(note)
-    }
-
-    private func isSourceRecording(_ item: SidebarSelection) -> Bool {
-        switch item {
-        case .systemAudio:
-            return transcriptionEngine.activeSource == .systemAudio
-        case .microphone:
-            return transcriptionEngine.activeSource == .microphone
-        default:
-            return false
-        }
     }
 
     private func formattedDate(_ date: Date) -> String {

@@ -7,7 +7,7 @@ struct ModelCardView: View {
     let isDownloading: Bool
     let downloadProgress: Double
     let downloadError: String?
-    let onSelect: () -> Void
+    let onSelect: (() -> Void)?
     let onDownload: () -> Void
     let onDelete: () -> Void
 
@@ -77,7 +77,7 @@ struct ModelCardView: View {
                         .controlSize(.small)
                         .disabled(true)
                 } else if isDownloaded {
-                    if !isSelected {
+                    if !isSelected, let onSelect {
                         Button("Select") { onSelect() }
                             .controlSize(.small)
                     }
