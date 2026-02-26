@@ -14,6 +14,10 @@ class ModelDownloadManager: ObservableObject {
         FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent(".cache/huggingface/hub")
     }()
+    private let swiftTransformersModelsDir: URL = {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
+            .appendingPathComponent("models")
+    }()
 
     private var progressTasks: [String: Task<Void, Never>] = [:]
 
@@ -36,6 +40,14 @@ class ModelDownloadManager: ObservableObject {
     }
 
     func isModelCached(repoID: String) -> Bool {
+        // Check swift-transformers cache (used by MLXLM/LLMModelFactory)
+        let swiftTransformersRepoDir = swiftTransformersModelsDir.appendingPathComponent(repoID)
+        if FileManager.default.fileExists(
+            atPath: swiftTransformersRepoDir.appendingPathComponent("model.safetensors").path
+        ) {
+            return true
+        }
+
         // Check mlx-audio/ cache (primary path used by mlx-audio-swift)
         let mlxAudioName = repoID.replacingOccurrences(of: "/", with: "_")
         let mlxAudioDir = cacheBaseDir.appendingPathComponent("mlx-audio/\(mlxAudioName)")
@@ -98,6 +110,10 @@ class ModelDownloadManager: ObservableObject {
     }
 
     func deleteModel(_ modelInfo: ModelInfo) {
+        // Delete swift-transformers cache
+        let swiftTransformersRepoDir = swiftTransformersModelsDir.appendingPathComponent(modelInfo.repoID)
+        try? FileManager.default.removeItem(at: swiftTransformersRepoDir)
+
         // Delete mlx-audio/ cache
         let mlxAudioName = modelInfo.repoID.replacingOccurrences(of: "/", with: "_")
         let mlxAudioDir = cacheBaseDir.appendingPathComponent("mlx-audio/\(mlxAudioName)")
