@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>ClothNote needs microphone access to record and transcribe audio.</string>
+	<string>VoxNote needs microphone access to record and transcribe audio.</string>
 </dict>
 </plist>

@@ -16,7 +16,7 @@ final class AppState {
 }
 
 @main
-struct ClothNoteApp: App {
+struct VoxNoteApp: App {
     private let appState = AppState.shared
 
     var body: some Scene {

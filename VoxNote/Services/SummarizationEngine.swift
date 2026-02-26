@@ -3,7 +3,7 @@ import os.log
 import MLXLLM
 import MLXLMCommon
 
-private let logger = Logger(subsystem: "com.clothnote", category: "SummarizationEngine")
+private let logger = Logger(subsystem: "com.voxnote", category: "SummarizationEngine")
 
 @MainActor
 class SummarizationEngine: ObservableObject {

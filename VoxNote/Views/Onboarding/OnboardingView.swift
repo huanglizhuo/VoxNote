@@ -16,7 +16,7 @@ struct OnboardingView: View {
                 .font(.system(size: 64))
                 .foregroundColor(.accentColor)
 
-            Text("Welcome to ClothNote")
+            Text("Welcome to VoxNote")
                 .font(.largeTitle.bold())
 
             Text("On-device speech recognition for your meetings.\nNo data leaves your Mac.")

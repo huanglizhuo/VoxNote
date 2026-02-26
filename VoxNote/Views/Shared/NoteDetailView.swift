@@ -92,7 +92,7 @@ struct NoteDetailView: View {
                     Spacer()
 
                     Label(
-                        note.deviceName ?? (note.source == .microphone ? "Microphone" : "Vox Record"),
+                        note.deviceName ?? (note.source == .microphone ? "Microphone" : "Node Record"),
                         systemImage: note.source == .microphone && note.deviceName == nil ? "mic" : "waveform.and.mic"
                     )
                     .font(.caption)

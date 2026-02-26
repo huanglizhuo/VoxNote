@@ -13,7 +13,7 @@ struct BlackHoleSetupGuide: View {
                     .keyboardShortcut(.defaultAction)
             }
 
-            Text("BlackHole is a virtual audio driver that lets ClothNote capture system audio (e.g., meeting audio from Zoom, browser, etc.).")
+            Text("BlackHole is a virtual audio driver that lets VoxNote capture system audio (e.g., meeting audio from Zoom, browser, etc.).")
                 .foregroundStyle(.secondary)
 
             Divider()
@@ -33,11 +33,11 @@ struct BlackHoleSetupGuide: View {
                     }
                 }
 
-                stepView(number: 3, title: "Create Multi-Output Device", description: "Click '+' at the bottom left, then 'Create Multi-Output Device'. Check both your speakers/headphones AND BlackHole 2ch. This routes audio to both your ears and ClothNote.")
+                stepView(number: 3, title: "Create Multi-Output Device", description: "Click '+' at the bottom left, then 'Create Multi-Output Device'. Check both your speakers/headphones AND BlackHole 2ch. This routes audio to both your ears and VoxNote.")
 
                 stepView(number: 4, title: "Set System Output", description: "In System Settings > Sound > Output, select the Multi-Output Device you just created.")
 
-                stepView(number: 5, title: "Select BlackHole in ClothNote", description: "Back in ClothNote, select 'BlackHole 2ch' from the device picker and start recording.")
+                stepView(number: 5, title: "Select BlackHole in VoxNote", description: "Back in VoxNote, select 'BlackHole 2ch' from the device picker and start recording.")
             }
 
             Spacer()

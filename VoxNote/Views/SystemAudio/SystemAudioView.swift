@@ -16,7 +16,7 @@ struct SystemAudioView: View {
             // Header
             VStack(spacing: 12) {
                 HStack {
-                    Text("Vox Record")
+                    Text("Node Record")
                         .font(.title2.bold())
                     Spacer()
                 }

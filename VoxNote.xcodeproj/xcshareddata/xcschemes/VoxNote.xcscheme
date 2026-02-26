@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "E10000000000000000000002"
-               BuildableName = "ClothNote.app"
-               BlueprintName = "ClothNote"
-               ReferencedContainer = "container:ClothNote.xcodeproj">
+               BuildableName = "VoxNote.app"
+               BlueprintName = "VoxNote"
+               ReferencedContainer = "container:VoxNote.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E10000000000000000000002"
-            BuildableName = "ClothNote.app"
-            BlueprintName = "ClothNote"
-            ReferencedContainer = "container:ClothNote.xcodeproj">
+            BuildableName = "VoxNote.app"
+            BlueprintName = "VoxNote"
+            ReferencedContainer = "container:VoxNote.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "E10000000000000000000002"
-            BuildableName = "ClothNote.app"
-            BlueprintName = "ClothNote"
-            ReferencedContainer = "container:ClothNote.xcodeproj">
+            BuildableName = "VoxNote.app"
+            BlueprintName = "VoxNote"
+            ReferencedContainer = "container:VoxNote.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

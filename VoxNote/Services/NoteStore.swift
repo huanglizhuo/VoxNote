@@ -9,7 +9,7 @@ class NoteStore: ObservableObject {
 
     init() {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        notesDirectory = appSupport.appendingPathComponent("ClothNote/notes", isDirectory: true)
+        notesDirectory = appSupport.appendingPathComponent("VoxNote/notes", isDirectory: true)
         audioDirectory = notesDirectory.appendingPathComponent("audio", isDirectory: true)
 
         // Ensure directories exist

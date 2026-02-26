@@ -10,7 +10,7 @@ class AudioCaptureService: ObservableObject {
     private var audioEngine: AVAudioEngine?
     private var audioFileWriter: AudioFileWriter?
     private let targetSampleRate: Double = 16000
-    private let resampleQueue = DispatchQueue(label: "com.clothnote.resample", qos: .userInitiated)
+    private let resampleQueue = DispatchQueue(label: "com.voxnote.resample", qos: .userInitiated)
 
     func startCapture(deviceID: AudioDeviceID? = nil, outputFileURL: URL? = nil, onSamples: @escaping @Sendable ([Float]) -> Void) throws {
         stop()
