@@ -2,6 +2,7 @@ import Foundation
 import MLXAudioSTT
 import MLXAudioCore
 import MLX
+import MLXAudioVAD
 
 @MainActor
 class TranscriptionEngine: ObservableObject {
@@ -92,7 +93,7 @@ class TranscriptionEngine: ObservableObject {
     func transcribeFileWithForcedAlignment(
         url: URL,
         language: String = "auto",
-        alignerLanguage: String = "English"
+        alignerLanguage: String = "auto"
     ) async throws -> (text: String, segments: [TranscriptSegment]) {
         guard let model else { throw TranscriptionError.modelNotLoaded }
 
@@ -104,24 +105,126 @@ class TranscriptionEngine: ObservableObject {
 
         let capturedModel = model
         let targetSampleRate = fileASRSampleRate
-        let (output, audio) = try await Task.detached {
-            let (_, audio) = try loadAudioArray(from: url, sampleRate: targetSampleRate)
-            let params = STTGenerateParameters(language: language)
-            let output = capturedModel.generate(audio: audio, generationParameters: params)
-            return (output, audio)
+        
+        let (_, originalAudioArray) = try await Task.detached {
+            try loadAudioArray(from: url, sampleRate: targetSampleRate)
         }.value
-
-        tokensPerSecond = output.generationTps
-        let formattedText = TranscriptFormatter.applyLineBreaks(to: output.text)
-        confirmedText = formattedText
-
+        let totalSamples = originalAudioArray.shape[0]
+        // 4 minutes (240 seconds) to avoid 5 minute hard limit
+        let maxChunkSamples = 240 * targetSampleRate 
+        
         let alignerRepo = forcedAlignerRepoID
-        let alignment = try await Task.detached {
-            let aligner = try await Qwen3ForcedAlignerModel.fromPretrained(alignerRepo)
-            return aligner.generate(audio: audio, text: formattedText, language: alignerLanguage)
-        }.value
+        var allFormattedText = ""
+        var allAlignments: [LocalAlignItem] = []
+        
+        if totalSamples <= maxChunkSamples {
+            // Short enough to process normally
+            let (output, alignment) = try await Task.detached {
+                let params = STTGenerateParameters(language: language)
+                let output = capturedModel.generate(audio: originalAudioArray, generationParameters: params)
+                let formattedText = TranscriptFormatter.applyLineBreaks(to: output.text)
+                
+                let aligner = try await Qwen3ForcedAlignerModel.fromPretrained(alignerRepo)
+                let alignment = aligner.generate(audio: originalAudioArray, text: formattedText, language: alignerLanguage)
+                return (output, alignment)
+            }.value
+            
+            tokensPerSecond = output.generationTps
+            allFormattedText = output.text // applyLineBreaks is done below dynamically
+            
+            allAlignments = alignment.items.map { 
+                LocalAlignItem(text: $0.text, startTime: $0.startTime, endTime: $0.endTime) 
+            }
+        } else {
+            // Chunking via SmartTurn
+            var chunks: [(startTime: TimeInterval, audio: MLXArray)] = []
+            
+            let smartTurnModel = try await Task.detached {
+                try await SmartTurnModel.fromPretrained("mlx-community/smart-turn-v3")
+            }.value
+            
+            var currentStart = 0
+            while currentStart < totalSamples {
+                let remaining = totalSamples - currentStart
+                if remaining <= maxChunkSamples {
+                    chunks.append((
+                        startTime: TimeInterval(currentStart) / TimeInterval(targetSampleRate),
+                        audio: originalAudioArray[currentStart..<totalSamples]
+                    ))
+                    break
+                }
+                
+                let searchEnd = currentStart + maxChunkSamples
+                let searchDurationSamples = 60 * targetSampleRate // 60s backwards scan window
+                let searchStart = max(currentStart + 10 * targetSampleRate, searchEnd - searchDurationSamples)
+                
+                var splitPoint = searchEnd
+                var candidateEnd = searchEnd
+                let step = 2 * targetSampleRate // 2 seconds scan increment
+                
+                while candidateEnd > searchStart {
+                    // SmartTurn takes the latest 8 seconds of what it's given
+                    let windowStart = max(currentStart, candidateEnd - 8 * targetSampleRate)
+                    let mlxSlice = originalAudioArray[windowStart..<candidateEnd]
+                    
+                    let result = try await Task.detached {
+                        try smartTurnModel.predictEndpoint(mlxSlice, sampleRate: targetSampleRate, threshold: 0.5)
+                    }.value
+                    
+                    if result.prediction == 1 {
+                        splitPoint = candidateEnd
+                        break
+                    }
+                    candidateEnd -= step
+                }
+                
+                chunks.append((
+                    startTime: TimeInterval(currentStart) / TimeInterval(targetSampleRate),
+                    audio: originalAudioArray[currentStart..<splitPoint]
+                ))
+                currentStart = splitPoint
+            }
+            
+            // Process chunks sequentially to keep unified memory healthy
+            let aligner = try await Task.detached {
+                try await Qwen3ForcedAlignerModel.fromPretrained(alignerRepo)
+            }.value
+            
+            for chunk in chunks {
+                let (output, alignments, tps) = try await Task.detached {
+                    let params = STTGenerateParameters(language: language)
+                    let output = capturedModel.generate(audio: chunk.audio, generationParameters: params)
+                    let formattedText = TranscriptFormatter.applyLineBreaks(to: output.text)
+                    
+                    let alignmentResult = aligner.generate(audio: chunk.audio, text: formattedText, language: alignerLanguage)
+                    
+                    let shifted = alignmentResult.items.map {
+                        LocalAlignItem(
+                            text: $0.text,
+                            startTime: $0.startTime + chunk.startTime,
+                            endTime: $0.endTime + chunk.startTime
+                        )
+                    }
+                    return (output.text, shifted, output.generationTps)
+                }.value
+                
+                if !allFormattedText.isEmpty {
+                    allFormattedText += " "
+                }
+                allFormattedText += output
+                allAlignments.append(contentsOf: alignments)
+                
+                await MainActor.run {
+                    self.tokensPerSecond = tps
+                    self.confirmedText = TranscriptFormatter.applyLineBreaks(to: allFormattedText)
+                }
+            }
+        }
 
-        return (text: formattedText, segments: alignedSegments(from: alignment.items))
+        let formattedAndBreakedText = TranscriptFormatter.applyLineBreaks(to: allFormattedText)
+        confirmedText = formattedAndBreakedText
+
+        return (text: formattedAndBreakedText, segments: alignedSegments(from: allAlignments))
     }
 
     // MARK: - File Transcription (Streaming tokens)
@@ -338,7 +441,13 @@ class TranscriptionEngine: ObservableObject {
         lastSegmentedLength = rawConfirmed.count
     }
 
-    private func alignedSegments(from items: [ForcedAlignItem]) -> [TranscriptSegment] {
+    private struct LocalAlignItem {
+        let text: String
+        let startTime: TimeInterval
+        let endTime: TimeInterval
+    }
+
+    private func alignedSegments(from items: [LocalAlignItem]) -> [TranscriptSegment] {
         guard !items.isEmpty else { return [] }
 
         var segments: [TranscriptSegment] = []

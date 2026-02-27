@@ -15,6 +15,7 @@
 		B01676922F503DB0007D9481 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = B01676912F503DB0007D9481 /* MLXLLM */; };
 		B01676942F503DB0007D9481 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = B01676932F503DB0007D9481 /* MLXLMCommon */; };
 		B01676A02F50D8B4007D9481 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = B016769F2F50D8B4007D9481 /* AppIcon.icon */; };
+		B01676A32F51DF65007D9481 /* MLXAudioVAD in Frameworks */ = {isa = PBXBuildFile; productRef = B01676A22F51DF65007D9481 /* MLXAudioVAD */; };
 		B10000000000000000000001 /* VoxNoteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* VoxNoteApp.swift */; };
 		B10000000000000000000002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* ContentView.swift */; };
 		B10000000000000000000003 /* ModelInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000003 /* ModelInfo.swift */; };
@@ -92,6 +93,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B01676A32F51DF65007D9481 /* MLXAudioVAD in Frameworks */,
 				B01676922F503DB0007D9481 /* MLXLLM in Frameworks */,
 				AA0000000000000000000004 /* MLXAudioSTT in Frameworks */,
 				B01676942F503DB0007D9481 /* MLXLMCommon in Frameworks */,
@@ -102,12 +104,20 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		B01676A12F51DF65007D9481 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		C10000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
 				C10000000000000000000002 /* VoxNote */,
 				C10000000000000000000014 /* Products */,
 				B016769F2F50D8B4007D9481 /* AppIcon.icon */,
+				B01676A12F51DF65007D9481 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -262,6 +272,7 @@
 				AA0000000000000000000003 /* MLXAudioCore */,
 				B01676912F503DB0007D9481 /* MLXLLM */,
 				B01676932F503DB0007D9481 /* MLXLMCommon */,
+				B01676A22F51DF65007D9481 /* MLXAudioVAD */,
 			);
 			productName = VoxNote;
 			productReference = E10000000000000000000001 /* VoxNote.app */;
@@ -601,6 +612,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B01676902F503DB0007D9481 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
 			productName = MLXLMCommon;
+		};
+		B01676A22F51DF65007D9481 /* MLXAudioVAD */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AA0000000000000000000001 /* XCRemoteSwiftPackageReference "mlx-audio-swift" */;
+			productName = MLXAudioVAD;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

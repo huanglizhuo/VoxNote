@@ -396,6 +396,22 @@ struct NoteDetailView: View {
                 .padding()
             } else if let refined = note.refinedContent, !refined.isEmpty {
                 VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        if let refineError {
+                            Text(refineError)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                        Spacer()
+                        Button {
+                            refineTranscript()
+                        } label: {
+                            Label("Re-refine", systemImage: "wand.and.stars")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(!transcriptionEngine.isModelLoaded || transcriptionEngine.isTranscribing)
+                    }
                     if let refinedSegments = note.refinedSegments, !refinedSegments.isEmpty {
                         LazyVStack(alignment: .leading, spacing: 6) {
                             ForEach(refinedSegments) { segment in
