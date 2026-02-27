@@ -45,6 +45,7 @@
 		B10000000000000000000032 /* TranscriptSegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000034 /* TranscriptSegment.swift */; };
 		B10000000000000000000033 /* AudioFileWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000035 /* AudioFileWriter.swift */; };
 		B10000000000000000000034 /* AudioPlayerBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000036 /* AudioPlayerBar.swift */; };
+		C7ED63182F511D5800662838 /* SmartTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7ED63172F511D5800662838 /* SmartTranslationService.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -83,6 +84,7 @@
 		A10000000000000000000034 /* TranscriptSegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptSegment.swift; sourceTree = "<group>"; };
 		A10000000000000000000035 /* AudioFileWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioFileWriter.swift; sourceTree = "<group>"; };
 		A10000000000000000000036 /* AudioPlayerBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayerBar.swift; sourceTree = "<group>"; };
+		C7ED63172F511D5800662838 /* SmartTranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartTranslationService.swift; sourceTree = "<group>"; };
 		B016769F2F50D8B4007D9481 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		E10000000000000000000001 /* VoxNote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoxNote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -149,6 +151,7 @@
 				A10000000000000000000035 /* AudioFileWriter.swift */,
 				8D035557F404F2B462B40EEB /* SummarizationEngine.swift */,
 				5131935C82452B95739B4905 /* AudioNormalizer.swift */,
+				C7ED63172F511D5800662838 /* SmartTranslationService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -353,6 +356,7 @@
 				6E0EA98F9BA1E2568CC581E4 /* TranslationLanguage.swift in Sources */,
 				507AFE21F7514246DEE6BF21 /* SummarizationEngine.swift in Sources */,
 				39D91EAA57B39931EE5FDCBB /* AudioNormalizer.swift in Sources */,
+				C7ED63182F511D5800662838 /* SmartTranslationService.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
