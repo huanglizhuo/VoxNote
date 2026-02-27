@@ -16,7 +16,7 @@ struct SidebarView: View {
         List(selection: $selection) {
             Section("Recording") {
                 HStack {
-                    Label("Node Record", systemImage: "waveform.and.mic")
+                    Label("Record New", systemImage: "waveform.and.mic")
                     Spacer()
                     if transcriptionEngine.activeSource != nil {
                         Circle()
