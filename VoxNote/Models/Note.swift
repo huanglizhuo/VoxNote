@@ -18,6 +18,7 @@ struct Note: Identifiable, Codable, Equatable {
     var segmentTranslations: [String: String]?  // segmentID.uuidString -> translated text
     var summary: String?
     var deviceName: String?  // name of the input device used for this recording
+    var speakerNames: [String: String]?  // e.g. ["Speaker 1": "Allen", "Speaker 2": "Bob"]
 
     var preview: String {
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -42,7 +43,8 @@ struct Note: Identifiable, Codable, Equatable {
         translatedRefinedContent: String? = nil,
         segmentTranslations: [String: String]? = nil,
         summary: String? = nil,
-        deviceName: String? = nil
+        deviceName: String? = nil,
+        speakerNames: [String: String]? = nil
     ) {
         self.id = id
         self.title = title ?? Self.defaultTitle(for: createdAt)
@@ -61,6 +63,7 @@ struct Note: Identifiable, Codable, Equatable {
         self.segmentTranslations = segmentTranslations
         self.summary = summary
         self.deviceName = deviceName
+        self.speakerNames = speakerNames
     }
 
     private static func defaultTitle(for date: Date) -> String {

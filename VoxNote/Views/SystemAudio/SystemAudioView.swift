@@ -3,6 +3,7 @@ import Translation
 
 struct SystemAudioView: View {
     @ObservedObject var viewModel: SystemAudioViewModel
+    @EnvironmentObject var speakerDiarizationService: SpeakerDiarizationService
 
     @State private var translationConfig: TranslationSession.Configuration?
     @State private var liveTranslationContinuation: AsyncStream<(id: UUID, text: String)>.Continuation?
@@ -39,6 +40,17 @@ struct SystemAudioView: View {
 
             Divider()
 
+            if speakerDiarizationService.isRunning {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("Identifying speakers…")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal)
+                .padding(.top, 6)
+            }
+
             // Transcript
             TranscriptionTextView(
                 segments: viewModel.transcriptionEngine.segments,
@@ -47,7 +59,8 @@ struct SystemAudioView: View {
                 isTranscribing: viewModel.isRecording,
                 isReversed: viewModel.isReversed,
                 segmentTranslations: segmentTranslations,
-                showTranslation: showTranslation
+                showTranslation: showTranslation,
+                liveSpeakerLabels: viewModel.liveSpeakerLabels
             )
             .padding()
 
@@ -202,7 +215,7 @@ struct SystemAudioView: View {
                     if let noteID, !currentTranslations.isEmpty {
                         Task {
                             try? await Task.sleep(nanoseconds: 200_000_000)
-                            viewModel.saveTranslations(currentTranslations, language: lang, to: noteID)
+                            viewMode1l.saveTranslations(currentTranslations, language: lang, to: noteID)
                         }
                     }
                 } else {

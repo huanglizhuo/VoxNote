@@ -28,7 +28,8 @@ struct ContentView: View {
             transcriptionEngine: AppState.shared.transcriptionEngine,
             captureService: AppState.shared.captureService,
             deviceManager: AppState.shared.deviceManager,
-            noteStore: AppState.shared.noteStore
+            noteStore: AppState.shared.noteStore,
+            speakerDiarizationService: AppState.shared.speakerDiarizationService
         ))
     }
 

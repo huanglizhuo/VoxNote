@@ -11,6 +11,7 @@ final class AppState {
     let deviceManager = AudioDeviceManager()
     let captureService = AudioCaptureService()
     let noteStore = NoteStore()
+    let speakerDiarizationService = SpeakerDiarizationService()
 
     private init() {}
 }
@@ -28,6 +29,7 @@ struct VoxNoteApp: App {
                 .environmentObject(appState.deviceManager)
                 .environmentObject(appState.captureService)
                 .environmentObject(appState.noteStore)
+                .environmentObject(appState.speakerDiarizationService)
                 .frame(minWidth: 720, minHeight: 500)
         }
         .windowStyle(.titleBar)

@@ -4,6 +4,7 @@ struct TranscriptSegment: Identifiable, Equatable, Codable {
     let id: UUID
     let timestamp: TimeInterval
     let text: String
+    var speaker: String?
 
     var formattedTimestamp: String {
         let totalSeconds = Int(timestamp)
@@ -12,9 +13,10 @@ struct TranscriptSegment: Identifiable, Equatable, Codable {
         return String(format: "[%02d:%02d]", minutes, seconds)
     }
 
-    init(id: UUID = UUID(), timestamp: TimeInterval, text: String) {
+    init(id: UUID = UUID(), timestamp: TimeInterval, text: String, speaker: String? = nil) {
         self.id = id
         self.timestamp = timestamp
         self.text = text
+        self.speaker = speaker
     }
 }

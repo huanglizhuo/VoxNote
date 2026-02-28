@@ -8,6 +8,9 @@ struct TranscriptionTextView: View {
     let isReversed: Bool
     var segmentTranslations: [UUID: String] = [:]
     var showTranslation: Bool = false
+    var speakerNames: [String: String] = [:]
+    /// Live speaker labels during recording — keyed by segment ID, overrides segment.speaker
+    var liveSpeakerLabels: [UUID: String] = [:]
 
     /// Segment-based init for live recording views
     init(
@@ -17,7 +20,9 @@ struct TranscriptionTextView: View {
         isTranscribing: Bool,
         isReversed: Bool = false,
         segmentTranslations: [UUID: String] = [:],
-        showTranslation: Bool = false
+        showTranslation: Bool = false,
+        speakerNames: [String: String] = [:],
+        liveSpeakerLabels: [UUID: String] = [:]
     ) {
         self.segments = segments
         self.unsegmentedText = unsegmentedText
@@ -26,6 +31,8 @@ struct TranscriptionTextView: View {
         self.isReversed = isReversed
         self.segmentTranslations = segmentTranslations
         self.showTranslation = showTranslation
+        self.speakerNames = speakerNames
+        self.liveSpeakerLabels = liveSpeakerLabels
     }
 
     /// Backward-compatible init for file transcription (wraps text in a single segment)
@@ -121,6 +128,16 @@ struct TranscriptionTextView: View {
                         .monospacedDigit()
                         .frame(width: timestampWidth, alignment: .leading)
                 }
+                if let rawSpeaker = liveSpeakerLabels[segment.id] ?? segment.speaker {
+                    let displayName = speakerNames[rawSpeaker] ?? rawSpeaker
+                    Text(displayName)
+                        .font(.caption2.bold())
+                        .foregroundStyle(speakerColor(rawSpeaker))
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(speakerColor(rawSpeaker).opacity(0.12))
+                        .clipShape(Capsule())
+                }
                 Text(segment.text)
                     .textSelection(.enabled)
             }
@@ -135,6 +152,16 @@ struct TranscriptionTextView: View {
                 }
             }
         }
+    }
+
+    private func speakerColor(_ rawSpeaker: String) -> Color {
+        let colors: [Color] = [.blue, .green, .orange, .purple]
+        // Extract numeric index from "Speaker N"
+        if let last = rawSpeaker.split(separator: " ").last,
+           let idx = Int(last) {
+            return colors[(idx - 1) % colors.count]
+        }
+        return .blue
     }
 
     @ViewBuilder

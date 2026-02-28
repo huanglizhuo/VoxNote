@@ -25,6 +25,10 @@ struct NoteDetailView: View {
     @State private var liveRefinedTranslation = ""
     @State private var translationConfig: TranslationSession.Configuration?
 
+    // Speaker renaming state
+    @State private var renamingSpeaker: String? = nil
+    @State private var renameText: String = ""
+
     // Summarization state
     @State private var isSummarizing = false
     @State private var showDownloadSummarizationModelAlert = false
@@ -96,10 +100,16 @@ struct NoteDetailView: View {
             return note.refinedContent ?? ""
         }
         // Live transcript tab
-        if showTranslation, !effectiveTranslations.isEmpty, let segments = note.segments {
+        if let segments = note.segments, !segments.isEmpty {
             return segments.map { segment in
-                var line = segment.text
-                if let t = effectiveTranslations[segment.id.uuidString] {
+                var parts: [String] = []
+                if let rawSpeaker = segment.speaker {
+                    let displayName = note.speakerNames?[rawSpeaker] ?? rawSpeaker
+                    parts.append("[\(displayName)]")
+                }
+                parts.append(segment.text)
+                var line = parts.joined(separator: " ")
+                if showTranslation, let t = effectiveTranslations[segment.id.uuidString], !t.isEmpty {
                     line += "\n" + t
                 }
                 return line
@@ -370,6 +380,28 @@ struct NoteDetailView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
+                if let rawSpeaker = segment.speaker {
+                    let displayName = note.speakerNames?[rawSpeaker] ?? rawSpeaker
+                    Button {
+                        renamingSpeaker = rawSpeaker
+                        renameText = note.speakerNames?[rawSpeaker] ?? rawSpeaker
+                    } label: {
+                        Text(displayName)
+                            .font(.caption2.bold())
+                            .foregroundStyle(speakerColor(rawSpeaker))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(speakerColor(rawSpeaker).opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: Binding(
+                        get: { renamingSpeaker == rawSpeaker },
+                        set: { if !$0 { renamingSpeaker = nil } }
+                    )) {
+                        speakerRenamePopover(rawSpeaker: rawSpeaker)
+                    }
+                }
                 Text(segment.text)
                     .textSelection(.enabled)
             }
@@ -381,6 +413,46 @@ struct NoteDetailView: View {
                     .padding(.leading, 58)
             }
         }
+    }
+
+    @ViewBuilder
+    private func speakerRenamePopover(rawSpeaker: String) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Rename \(rawSpeaker)")
+                .font(.headline)
+            TextField("Display name", text: $renameText)
+                .textFieldStyle(.roundedBorder)
+                .frame(minWidth: 180)
+                .onSubmit { commitRename(rawSpeaker: rawSpeaker) }
+            HStack {
+                Button("Cancel") { renamingSpeaker = nil }
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button("Rename") { commitRename(rawSpeaker: rawSpeaker) }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(renameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding()
+    }
+
+    private func commitRename(rawSpeaker: String) {
+        let trimmed = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { renamingSpeaker = nil; return }
+        var updated = note
+        var names = updated.speakerNames ?? [:]
+        names[rawSpeaker] = trimmed
+        updated.speakerNames = names
+        noteStore.save(updated)
+        renamingSpeaker = nil
+    }
+
+    private func speakerColor(_ rawSpeaker: String) -> Color {
+        let colors: [Color] = [.blue, .green, .orange, .purple]
+        if let last = rawSpeaker.split(separator: " ").last, let idx = Int(last) {
+            return colors[(idx - 1) % colors.count]
+        }
+        return .blue
     }
 
     private var refinedNoteTab: some View {

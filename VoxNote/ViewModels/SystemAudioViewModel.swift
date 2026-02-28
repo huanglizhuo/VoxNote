@@ -14,25 +14,40 @@ class SystemAudioViewModel: ObservableObject {
     @Published var error: String?
     @Published var recordingStartDate: Date?
     @Published var isReversed = true
+    @Published var liveSpeakerLabels: [UUID: String] = [:]
 
     let transcriptionEngine: TranscriptionEngine
     let captureService: AudioCaptureService
     let deviceManager: AudioDeviceManager
     let noteStore: NoteStore
+    let speakerDiarizationService: SpeakerDiarizationService
 
     private(set) var currentRecordingNoteID: UUID?
     private var autoSaveTask: Task<Void, Never>?
+    private var liveDiarizationTask: Task<Void, Never>?
     private var cancellables = Set<AnyCancellable>()
+    private var recordedSamples: [Float] = []
 
-    init(transcriptionEngine: TranscriptionEngine, captureService: AudioCaptureService, deviceManager: AudioDeviceManager, noteStore: NoteStore) {
+    init(transcriptionEngine: TranscriptionEngine, captureService: AudioCaptureService, deviceManager: AudioDeviceManager, noteStore: NoteStore, speakerDiarizationService: SpeakerDiarizationService) {
         self.transcriptionEngine = transcriptionEngine
         self.captureService = captureService
         self.deviceManager = deviceManager
         self.noteStore = noteStore
+        self.speakerDiarizationService = speakerDiarizationService
 
         // Forward engine changes so views re-render when transcript text updates
         transcriptionEngine.objectWillChange
             .sink { [weak self] _ in self?.objectWillChange.send() }
+            .store(in: &cancellables)
+
+        // Trigger live diarization whenever a new segment is confirmed
+        transcriptionEngine.$segments
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] segs in
+                guard let self, self.isRecording, !segs.isEmpty else { return }
+                self.scheduleLiveDiarization()
+            }
             .store(in: &cancellables)
 
         if let blackHole = deviceManager.blackHoleDevices.first {
@@ -69,9 +84,14 @@ class SystemAudioViewModel: ObservableObject {
 
             let audioURL = noteStore.audioDirectory.appendingPathComponent(note.audioFileName!)
             try transcriptionEngine.startStreamingTranscription(source: .systemAudio)
+            recordedSamples = []
+            liveSpeakerLabels = [:]
             let engine = transcriptionEngine
-            try captureService.startCapture(deviceID: device.id, outputFileURL: audioURL) { samples in
+            try captureService.startCapture(deviceID: device.id, outputFileURL: audioURL) { [weak self] samples in
                 engine.feedAudio(samples: samples)
+                Task { @MainActor [weak self] in
+                    self?.recordedSamples.append(contentsOf: samples)
+                }
             }
             isRecording = true
             error = nil
@@ -107,13 +127,19 @@ class SystemAudioViewModel: ObservableObject {
     func stopRecording() {
         captureService.stop()
         transcriptionEngine.stopStreaming()
+        liveDiarizationTask?.cancel()
+        liveDiarizationTask = nil
 
         let noteID = currentRecordingNoteID
         let startDate = recordingStartDate
+        let samples = recordedSamples
+        recordedSamples = []
+        logger.info("[Diarization] stopRecording — captured \(samples.count) samples for noteID=\(noteID?.uuidString ?? "nil")")
         Task { [weak self] in
             try? await Task.sleep(nanoseconds: 100_000_000)
             guard let self else { return }
             self.finishRecording(noteID: noteID, startDate: startDate)
+            await self.runDiarization(samples: samples, noteID: noteID)
         }
     }
 
@@ -193,6 +219,83 @@ class SystemAudioViewModel: ObservableObject {
             }
             return line
         }.joined(separator: "\n\n")
+    }
+
+    // MARK: - Speaker Diarization
+
+    private func scheduleLiveDiarization() {
+        liveDiarizationTask?.cancel()
+        let samples = recordedSamples
+        let segments = transcriptionEngine.segments
+        liveDiarizationTask = Task { [weak self] in
+            // 0.5 s debounce — batch rapid segment arrivals
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled, let self else { return }
+            await self.runLiveDiarization(samples: samples, segments: segments)
+        }
+    }
+
+    private func runLiveDiarization(samples: [Float], segments: [TranscriptSegment]) async {
+        guard !samples.isEmpty, !segments.isEmpty else { return }
+        logger.info("[Diarization] live update — samples=\(samples.count) segments=\(segments.count)")
+        await speakerDiarizationService.loadModelIfNeeded()
+        let diarSegments = await speakerDiarizationService.diarize(samples: samples)
+        guard !diarSegments.isEmpty else {
+            logger.warning("[Diarization] live: no diar segments returned")
+            return
+        }
+        var labels: [UUID: String] = [:]
+        for seg in segments {
+            let ts = Float(seg.timestamp)
+            if let match = diarSegments.first(where: { $0.start <= ts && ts < $0.end }) {
+                labels[seg.id] = speakerLabel(from: match.speaker)
+            } else if let closest = diarSegments.min(by: { abs($0.start - ts) < abs($1.start - ts) }) {
+                labels[seg.id] = speakerLabel(from: closest.speaker)
+            }
+        }
+        logger.info("[Diarization] live: assigned \(labels.count) speaker labels")
+        liveSpeakerLabels = labels
+    }
+
+    private func runDiarization(samples: [Float], noteID: UUID?) async {
+        logger.info("[Diarization] runDiarization — samples=\(samples.count) noteID=\(noteID?.uuidString ?? "nil")")
+        guard let noteID else { logger.warning("[Diarization] noteID is nil, aborting"); return }
+        guard !samples.isEmpty else { logger.warning("[Diarization] samples is empty, aborting"); return }
+        await speakerDiarizationService.loadModelIfNeeded()
+        let diarSegments = await speakerDiarizationService.diarize(samples: samples)
+        logger.info("[Diarization] diarize returned \(diarSegments.count) segments")
+        guard !diarSegments.isEmpty else {
+            logger.warning("[Diarization] no diarization segments returned, skipping speaker assignment")
+            return
+        }
+        guard var note = noteStore.notes.first(where: { $0.id == noteID }) else {
+            logger.error("[Diarization] note \(noteID.uuidString) not found in store")
+            return
+        }
+        guard var segments = note.segments else {
+            logger.warning("[Diarization] note has no segments")
+            return
+        }
+        logger.info("[Diarization] mapping \(diarSegments.count) diar segments → \(segments.count) transcript segments")
+        for i in segments.indices {
+            let ts = Float(segments[i].timestamp)
+            if let match = diarSegments.first(where: { $0.start <= ts && ts < $0.end }) {
+                let label = speakerLabel(from: match.speaker)
+                logger.info("[Diarization]   seg[\(i)] ts=\(ts, format: .fixed(precision: 2)) → \(label) (match start=\(match.start, format: .fixed(precision: 2)) end=\(match.end, format: .fixed(precision: 2)))")
+                segments[i].speaker = label
+            } else if let closest = diarSegments.min(by: { abs($0.start - ts) < abs($1.start - ts) }) {
+                let label = speakerLabel(from: closest.speaker)
+                logger.info("[Diarization]   seg[\(i)] ts=\(ts, format: .fixed(precision: 2)) → \(label) (fallback closest start=\(closest.start, format: .fixed(precision: 2)) end=\(closest.end, format: .fixed(precision: 2)))")
+                segments[i].speaker = label
+            }
+        }
+        note.segments = segments
+        logger.info("[Diarization] saving note with speaker labels")
+        noteStore.save(note)
+    }
+
+    private func speakerLabel(from speakerIndex: Int) -> String {
+        return "Speaker \(speakerIndex + 1)"
     }
 
     // MARK: - Auto-save
