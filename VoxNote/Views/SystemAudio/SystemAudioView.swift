@@ -9,8 +9,10 @@ struct SystemAudioView: View {
     @State private var liveTranslationContinuation: AsyncStream<(id: UUID, text: String)>.Continuation?
     @State private var segmentTranslations: [UUID: String] = [:]
     @State private var showTranslation = false
+    @State private var translationError: String?
     @State private var isPulsing = false
     @AppStorage("translationTargetLanguage") private var targetLanguageRaw: String = "disabled"
+    @AppStorage("translationSourceLanguage") private var sourceLanguageRaw: String = "disabled"
 
     var body: some View {
         VStack(spacing: 0) {
@@ -34,6 +36,18 @@ struct SystemAudioView: View {
                     Label(error, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.red)
                         .font(.callout)
+                }
+
+                if let err = translationError {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .foregroundStyle(.orange)
+                        Text(err)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Link("Open Settings", destination: URL(string: "x-apple.systempreferences:com.apple.preference.language")!)
+                            .font(.caption)
+                    }
                 }
             }
             .padding()
@@ -103,15 +117,20 @@ struct SystemAudioView: View {
                 liveTranslationContinuation = nil
                 print("[Translation] 🔚 translationTask ended — continuation cleared")
             }
+            translationError = nil
             print("[Translation] 🔧 translationTask fired — calling prepareTranslation()")
             do {
                 try await session.prepareTranslation()
                 print("[Translation] ✅ prepareTranslation() succeeded")
             } catch {
-                // Non-fatal: prepareTranslation may fail for auto-detect source or if the
-                // language pack isn't installed yet. Individual translate() calls will
-                // trigger the system download UI as needed.
-                print("[Translation] ⚠️  prepareTranslation() failed (continuing anyway): \(error)")
+                print("[Translation] ❌ prepareTranslation() failed: \(error)")
+                let reason = (error as NSError).localizedFailureReason ?? error.localizedDescription
+                if reason.localizedCaseInsensitiveContains("offline") || reason.localizedCaseInsensitiveContains("not available") {
+                    translationError = "Language pack not installed. Open Language & Region settings to download it."
+                    return
+                }
+                // For auto-detect source the system may not be able to prepare ahead of time —
+                // continue and let individual translate() calls trigger the download sheet.
             }
             let (stream, continuation) = AsyncStream<(id: UUID, text: String)>.makeStream()
             liveTranslationContinuation = continuation
@@ -124,6 +143,10 @@ struct SystemAudioView: View {
                     segmentTranslations[item.id] = r.targetText
                 } catch {
                     print("[Translation] ❌ translate failed for \(item.id): \(error)")
+                    let reason = (error as NSError).localizedFailureReason ?? error.localizedDescription
+                    if reason.localizedCaseInsensitiveContains("offline") || reason.localizedCaseInsensitiveContains("not available") {
+                        translationError = "Language pack not installed. Open Language & Region settings to download it."
+                    }
                 }
             }
         }
@@ -148,16 +171,22 @@ struct SystemAudioView: View {
         }
         .onAppear {
             isPulsing = viewModel.isRecording
-            print("[Translation] 👀 onAppear — stored lang='\(targetLanguageRaw)' | config=\(translationConfig != nil ? "set" : "nil")")
-            let lang = TranslationLanguage(rawValue: targetLanguageRaw) ?? .disabled
-            if let locale = lang.localeLanguage {
-                translationConfig = TranslationSession.Configuration(source: nil, target: locale)
+            print("[Translation] 👀 onAppear — target='\(targetLanguageRaw)' source='\(sourceLanguageRaw)' | config=\(translationConfig != nil ? "set" : "nil")")
+            if let cfg = makeTranslationConfig() {
+                translationConfig = cfg
                 showTranslation = true
-                print("[Translation] ✅ onAppear set translationConfig for locale=\(locale)")
+                print("[Translation] ✅ onAppear set translationConfig")
             } else {
-                print("[Translation] ℹ️  onAppear — lang is disabled, no config set")
+                print("[Translation] ℹ️  onAppear — target lang is disabled, no config set")
             }
         }
+    }
+
+    private func makeTranslationConfig() -> TranslationSession.Configuration? {
+        let target = TranslationLanguage(rawValue: targetLanguageRaw) ?? .disabled
+        guard let targetLocale = target.localeLanguage else { return nil }
+        let source = TranslationLanguage(rawValue: sourceLanguageRaw) ?? .disabled
+        return TranslationSession.Configuration(source: source.localeLanguage, target: targetLocale)
     }
 
     // MARK: - Subviews
@@ -215,7 +244,7 @@ struct SystemAudioView: View {
                     if let noteID, !currentTranslations.isEmpty {
                         Task {
                             try? await Task.sleep(nanoseconds: 200_000_000)
-                            viewMode1l.saveTranslations(currentTranslations, language: lang, to: noteID)
+                            viewModel.saveTranslations(currentTranslations, language: lang, to: noteID)
                         }
                     }
                 } else {
@@ -263,13 +292,32 @@ struct SystemAudioView: View {
         }
     }
 
-    // Language picker + translation toggle — together so picking a language auto-shows translations
+    // Source + target language pickers and translation toggle
     private var translationControls: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             Image(systemName: "character.bubble")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
+            // Source language (Auto = nil)
+            Picker("", selection: $sourceLanguageRaw) {
+                ForEach(TranslationLanguage.allCases) { lang in
+                    Text(lang.sourceDisplayName).tag(lang.rawValue)
+                }
+            }
+            .pickerStyle(.menu)
+            .frame(maxWidth: 100)
+            .help("Source language")
+            .onChange(of: sourceLanguageRaw) { _, _ in
+                translationConfig = makeTranslationConfig()
+                print("[Translation] 🌐 source changed to '\(sourceLanguageRaw)'")
+            }
+
+            Image(systemName: "arrow.right")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+
+            // Target language
             Picker("", selection: $targetLanguageRaw) {
                 ForEach(TranslationLanguage.allCases) { lang in
                     Text(lang.displayName).tag(lang.rawValue)
@@ -277,13 +325,13 @@ struct SystemAudioView: View {
             }
             .pickerStyle(.menu)
             .frame(maxWidth: 120)
+            .help("Target language")
             .onChange(of: targetLanguageRaw) { _, raw in
                 let lang = TranslationLanguage(rawValue: raw) ?? .disabled
-                translationConfig = lang.localeLanguage.map {
-                    TranslationSession.Configuration(source: nil, target: $0)
-                }
+                translationConfig = makeTranslationConfig()
+                translationError = nil
                 showTranslation = lang != .disabled
-                print("[Translation] 🌐 language picker changed to '\(raw)' — config=\(translationConfig != nil ? "set" : "nil") showTranslation=\(showTranslation)")
+                print("[Translation] 🌐 target changed to '\(raw)' — config=\(translationConfig != nil ? "set" : "nil")")
             }
 
             Toggle(isOn: $showTranslation) {

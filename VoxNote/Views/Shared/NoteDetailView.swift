@@ -25,16 +25,13 @@ struct NoteDetailView: View {
     @State private var liveRefinedTranslation = ""
     @State private var translationConfig: TranslationSession.Configuration?
 
-    // Speaker renaming state
-    @State private var renamingSpeaker: String? = nil
-    @State private var renameText: String = ""
-
     // Summarization state
     @State private var isSummarizing = false
     @State private var showDownloadSummarizationModelAlert = false
     @State private var summarizationError: String?
 
     @AppStorage("translationTargetLanguage") private var translationTargetLanguage: String = TranslationLanguage.disabled.rawValue
+    @AppStorage("translationSourceLanguage") private var translationSourceLanguage: String = TranslationLanguage.disabled.rawValue
 
     private var audioURL: URL? {
         noteStore.audioFileURL(for: note)
@@ -245,21 +242,37 @@ struct NoteDetailView: View {
 
                 Spacer()
 
-                // Translate
-                Picker("", selection: $translationTargetLanguage) {
-                    ForEach(TranslationLanguage.allCases.filter { $0 != .disabled }) { lang in
-                        Text(lang.displayName).tag(lang.rawValue)
+                // Translate — source → target
+                HStack(spacing: 4) {
+                    Picker("", selection: $translationSourceLanguage) {
+                        ForEach(TranslationLanguage.allCases) { lang in
+                            Text(lang.sourceDisplayName).tag(lang.rawValue)
+                        }
                     }
-                }
-                .pickerStyle(.menu)
-                .frame(maxWidth: 110)
+                    .pickerStyle(.menu)
+                    .frame(maxWidth: 90)
+                    .help("Source language")
 
-                Button {
-                    triggerTranslation()
-                } label: {
-                    Label(hasTranslations ? "Re-translate" : "Translate", systemImage: "character.bubble")
+                    Image(systemName: "arrow.right")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    Picker("", selection: $translationTargetLanguage) {
+                        ForEach(TranslationLanguage.allCases.filter { $0 != .disabled }) { lang in
+                            Text(lang.displayName).tag(lang.rawValue)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .frame(maxWidth: 110)
+                    .help("Target language")
+
+                    Button {
+                        triggerTranslation()
+                    } label: {
+                        Label(hasTranslations ? "Re-translate" : "Translate", systemImage: "character.bubble")
+                    }
+                    .disabled(translationTargetLanguage == TranslationLanguage.disabled.rawValue)
                 }
-                .disabled(translationTargetLanguage == TranslationLanguage.disabled.rawValue)
 
                 // Summarize
                 Button {
@@ -296,9 +309,12 @@ struct NoteDetailView: View {
             do {
                 try await session.prepareTranslation()
             } catch {
-                // Preflight can fail transiently (e.g. TranslationErrorDomain Code=21).
-                // Try the real translation call anyway.
-                translateError = "Preflight failed, retrying translation..."
+                let reason = (error as NSError).localizedFailureReason ?? error.localizedDescription
+                if reason.localizedCaseInsensitiveContains("offline") || reason.localizedCaseInsensitiveContains("not available") {
+                    translateError = "Language pack not installed. Open System Settings → Language & Region to download it."
+                    return
+                }
+                // Other transient errors — try the real translation call anyway.
             }
             await performTranslation(session: session)
         }
@@ -381,26 +397,17 @@ struct NoteDetailView: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
                 if let rawSpeaker = segment.speaker {
-                    let displayName = note.speakerNames?[rawSpeaker] ?? rawSpeaker
-                    Button {
-                        renamingSpeaker = rawSpeaker
-                        renameText = note.speakerNames?[rawSpeaker] ?? rawSpeaker
-                    } label: {
-                        Text(displayName)
-                            .font(.caption2.bold())
-                            .foregroundStyle(speakerColor(rawSpeaker))
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(speakerColor(rawSpeaker).opacity(0.12))
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .popover(isPresented: Binding(
-                        get: { renamingSpeaker == rawSpeaker },
-                        set: { if !$0 { renamingSpeaker = nil } }
-                    )) {
-                        speakerRenamePopover(rawSpeaker: rawSpeaker)
-                    }
+                    SpeakerChipButton(
+                        rawSpeaker: rawSpeaker,
+                        displayName: note.speakerNames?[rawSpeaker] ?? rawSpeaker,
+                        onRename: { newName in
+                            var updated = note
+                            var names = updated.speakerNames ?? [:]
+                            names[rawSpeaker] = newName
+                            updated.speakerNames = names
+                            noteStore.save(updated)
+                        }
+                    )
                 }
                 Text(segment.text)
                     .textSelection(.enabled)
@@ -415,45 +422,6 @@ struct NoteDetailView: View {
         }
     }
 
-    @ViewBuilder
-    private func speakerRenamePopover(rawSpeaker: String) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Rename \(rawSpeaker)")
-                .font(.headline)
-            TextField("Display name", text: $renameText)
-                .textFieldStyle(.roundedBorder)
-                .frame(minWidth: 180)
-                .onSubmit { commitRename(rawSpeaker: rawSpeaker) }
-            HStack {
-                Button("Cancel") { renamingSpeaker = nil }
-                    .keyboardShortcut(.cancelAction)
-                Spacer()
-                Button("Rename") { commitRename(rawSpeaker: rawSpeaker) }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(renameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-        }
-        .padding()
-    }
-
-    private func commitRename(rawSpeaker: String) {
-        let trimmed = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { renamingSpeaker = nil; return }
-        var updated = note
-        var names = updated.speakerNames ?? [:]
-        names[rawSpeaker] = trimmed
-        updated.speakerNames = names
-        noteStore.save(updated)
-        renamingSpeaker = nil
-    }
-
-    private func speakerColor(_ rawSpeaker: String) -> Color {
-        let colors: [Color] = [.blue, .green, .orange, .purple]
-        if let last = rawSpeaker.split(separator: " ").last, let idx = Int(last) {
-            return colors[(idx - 1) % colors.count]
-        }
-        return .blue
-    }
 
     private var refinedNoteTab: some View {
         ScrollView {
@@ -545,13 +513,14 @@ struct NoteDetailView: View {
     // MARK: - Translation Actions
 
     private func triggerTranslation() {
-        guard let lang = TranslationLanguage(rawValue: translationTargetLanguage),
-              lang != .disabled,
-              let localeLanguage = lang.localeLanguage else { return }
+        guard let target = TranslationLanguage(rawValue: translationTargetLanguage),
+              target != .disabled,
+              let targetLocale = target.localeLanguage else { return }
+        let source = TranslationLanguage(rawValue: translationSourceLanguage) ?? .disabled
         // Force translationTask to rerun even when language is unchanged.
         translationConfig = nil
         DispatchQueue.main.async {
-            translationConfig = TranslationSession.Configuration(source: nil, target: localeLanguage)
+            translationConfig = TranslationSession.Configuration(source: source.localeLanguage, target: targetLocale)
         }
     }
 
@@ -755,5 +724,69 @@ struct NoteDetailView: View {
         let minutes = totalSeconds / 60
         let seconds = totalSeconds % 60
         return String(format: "%d:%02d", minutes, seconds)
+    }
+}
+
+// MARK: - SpeakerChipButton
+
+/// A self-contained chip button that owns its popover + text-field state.
+/// Keeping rename state local prevents parent re-renders from dismissing the popover
+/// while the user is typing.
+private struct SpeakerChipButton: View {
+    let rawSpeaker: String
+    let displayName: String
+    let onRename: (String) -> Void
+
+    @State private var isShowingPopover = false
+    @State private var renameText = ""
+
+    var body: some View {
+        Button {
+            renameText = displayName
+            isShowingPopover = true
+        } label: {
+            Text(displayName)
+                .font(.caption2.bold())
+                .foregroundStyle(speakerColor)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(speakerColor.opacity(0.12))
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $isShowingPopover) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Rename \(rawSpeaker)")
+                    .font(.headline)
+                TextField("Display name", text: $renameText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(minWidth: 180)
+                    .onSubmit { commit() }
+                HStack {
+                    Button("Cancel") { isShowingPopover = false }
+                        .keyboardShortcut(.cancelAction)
+                    Spacer()
+                    Button("Rename") { commit() }
+                        .keyboardShortcut(.defaultAction)
+                        .disabled(renameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+            .padding()
+        }
+    }
+
+    private func commit() {
+        let trimmed = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { isShowingPopover = false; return }
+        onRename(trimmed)
+        isShowingPopover = false
+    }
+
+    private var speakerColor: Color {
+        let colors: [Color] = [.blue, .green, .orange, .purple]
+        if let last = rawSpeaker.split(separator: " ").last, let idx = Int(last) {
+            return colors[(idx - 1) % colors.count]
+        }
+        return .blue
     }
 }

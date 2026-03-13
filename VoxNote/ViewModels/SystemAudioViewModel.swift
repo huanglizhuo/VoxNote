@@ -53,6 +53,13 @@ class SystemAudioViewModel: ObservableObject {
         if let blackHole = deviceManager.blackHoleDevices.first {
             selectedDevice = blackHole
         }
+
+        // Pre-load the diarization model at low priority so it's ready before
+        // the user starts recording. Loading it during recording competes with
+        // transcription/translation for GPU memory, so we want it warm ahead of time.
+        Task(priority: .background) { [weak speakerDiarizationService] in
+            await speakerDiarizationService?.loadModelIfNeeded()
+        }
     }
 
     var hasBlackHole: Bool {
@@ -225,20 +232,31 @@ class SystemAudioViewModel: ObservableObject {
 
     private func scheduleLiveDiarization() {
         liveDiarizationTask?.cancel()
-        let samples = recordedSamples
-        let segments = transcriptionEngine.segments
-        liveDiarizationTask = Task { [weak self] in
-            // 0.5 s debounce — batch rapid segment arrivals
+        // Do NOT copy recordedSamples here — that would synchronously copy potentially
+        // hundreds of MB on the main thread during a segment-arrival event.
+        // Instead, copy inside the Task body after the debounce sleep.
+        liveDiarizationTask = Task(priority: .utility) { [weak self] in
+            // 0.5 s debounce — batch rapid segment arrivals into one diarization run
             try? await Task.sleep(nanoseconds: 500_000_000)
             guard !Task.isCancelled, let self else { return }
+            // Snapshot on main actor after the debounce window — one copy, deferred
+            let samples = self.recordedSamples
+            let segments = self.transcriptionEngine.segments
             await self.runLiveDiarization(samples: samples, segments: segments)
         }
     }
 
     private func runLiveDiarization(samples: [Float], segments: [TranscriptSegment]) async {
         guard !samples.isEmpty, !segments.isEmpty else { return }
+        // Skip live diarization if the model isn't already loaded — loading it during
+        // an active recording competes with transcription and the Apple Translation
+        // session for GPU/memory, causing live translation to silently fail.
+        // Post-stop diarization (runDiarization) will load the model after recording ends.
+        guard speakerDiarizationService.isModelLoaded else {
+            logger.info("[Diarization] live: model not yet loaded, skipping to avoid interfering with translation")
+            return
+        }
         logger.info("[Diarization] live update — samples=\(samples.count) segments=\(segments.count)")
-        await speakerDiarizationService.loadModelIfNeeded()
         let diarSegments = await speakerDiarizationService.diarize(samples: samples)
         guard !diarSegments.isEmpty else {
             logger.warning("[Diarization] live: no diar segments returned")

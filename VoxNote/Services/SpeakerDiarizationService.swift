@@ -12,6 +12,8 @@ class SpeakerDiarizationService: ObservableObject {
     private var model: SortformerModel?
     private let repoID = "mlx-community/diar_streaming_sortformer_4spk-v2.1-fp16"
 
+    var isModelLoaded: Bool { model != nil }
+
     func loadModelIfNeeded() async {
         guard model == nil else {
             logger.info("[Diarization] model already loaded, skipping")
@@ -43,10 +45,14 @@ class SpeakerDiarizationService: ObservableObject {
         isRunning = true
         defer { isRunning = false }
         do {
-            let audio = MLXArray(samples)
             logger.info("[Diarization] running generate()…")
-            let result = try await Task.detached { [audio] in
-                try await model.generate(audio: audio, sampleRate: sampleRate, threshold: 0.5)
+            // Capture model + samples into the detached task so that:
+            // 1. MLXArray allocation (Metal buffer copy) happens off the main thread
+            // 2. model.generate() (MLX inference) runs off the main thread
+            // Neither blocks the UI/scroll layer.
+            let result = try await Task.detached(priority: .utility) { [model, samples, sampleRate] in
+                let audio = MLXArray(samples)
+                return try await model.generate(audio: audio, sampleRate: sampleRate, threshold: 0.5)
             }.value
             logger.info("[Diarization] generate() done — segments=\(result.segments.count) numSpeakers=\(result.numSpeakers)")
             for seg in result.segments {
