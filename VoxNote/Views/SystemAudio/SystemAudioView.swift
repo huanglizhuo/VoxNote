@@ -10,6 +10,47 @@ struct SystemAudioView: View {
     @State private var showTranslation = false
     @State private var isPulsing = false
     @AppStorage("translationTargetLanguage") private var targetLanguageRaw: String = "disabled"
+    @AppStorage("translationSourceLanguages") private var sourceLanguagesData: Data = Data()
+    @State private var showSourceLanguagePicker = false
+    
+    /// Smart translation service for language detection
+    @StateObject private var translationService = SmartTranslationService()
+    
+    /// Computed property to get/set source languages from stored data
+    private var selectedSourceLanguages: Set<TranslationLanguage> {
+        get {
+            guard !sourceLanguagesData.isEmpty,
+                  let decoded = try? JSONDecoder().decode(Set<String>.self, from: sourceLanguagesData) else {
+                return []
+            }
+            return Set(decoded.compactMap { TranslationLanguage(rawValue: $0) })
+        }
+        nonmutating set {
+            let rawValues = Set(newValue.map { $0.rawValue })
+            if let encoded = try? JSONEncoder().encode(rawValues) {
+                sourceLanguagesData = encoded
+            }
+        }
+    }
+    
+    /// Display text for source language button
+    private var sourceLanguageDisplayText: String {
+        if selectedSourceLanguages.isEmpty {
+            return "Auto"
+        }
+        let sorted = selectedSourceLanguages.sorted { $0.rawValue < $1.rawValue }
+        return sorted.map { $0.shortDisplayName }.joined(separator: "/")
+    }
+    
+    /// Get source locale for translation config
+    private var sourceLocaleForConfig: Locale.Language? {
+        let langs = selectedSourceLanguages
+        if langs.count == 1, let single = langs.first {
+            return single.localeLanguage
+        }
+        // Multiple or no languages selected - use nil for auto-detect
+        return nil
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -105,6 +146,14 @@ struct SystemAudioView: View {
             print("[Translation] 🔄 live translation loop active — waiting for segments")
             for await item in stream {
                 guard !Task.isCancelled else { break }
+                
+                // Detect language before translating (for logging/debugging)
+                let detection = translationService.detectLanguage(for: item.text)
+                let detectedInfo = detection.hypotheses.prefix(3).map { 
+                    "\($0.language.shortDisplayName):\(String(format: "%.0f%%", $0.probability * 100))" 
+                }.joined(separator: " ")
+                print("[Translation] 🔍 detected: \(detectedInfo) confidence=\(detection.confidence)")
+                
                 do {
                     let r = try await session.translate(item.text)
                     print("[Translation] ✅ \(item.id) → \"\(String(r.targetText.prefix(40)))\"")
@@ -136,11 +185,16 @@ struct SystemAudioView: View {
         .onAppear {
             isPulsing = viewModel.isRecording
             print("[Translation] 👀 onAppear — stored lang='\(targetLanguageRaw)' | config=\(translationConfig != nil ? "set" : "nil")")
+            
+            // Sync translation service with stored settings
+            translationService.expectedSourceLanguages = selectedSourceLanguages
+            translationService.targetLanguage = TranslationLanguage(rawValue: targetLanguageRaw) ?? .disabled
+            
             let lang = TranslationLanguage(rawValue: targetLanguageRaw) ?? .disabled
             if let locale = lang.localeLanguage {
-                translationConfig = TranslationSession.Configuration(source: nil, target: locale)
+                translationConfig = TranslationSession.Configuration(source: sourceLocaleForConfig, target: locale)
                 showTranslation = true
-                print("[Translation] ✅ onAppear set translationConfig for locale=\(locale)")
+                print("[Translation] ✅ onAppear set translationConfig for source=\(sourceLocaleForConfig?.maximalIdentifier ?? "auto") target=\(locale)")
             } else {
                 print("[Translation] ℹ️  onAppear — lang is disabled, no config set")
             }
@@ -256,21 +310,52 @@ struct SystemAudioView: View {
             Image(systemName: "character.bubble")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-
+            
+            // Source language multi-select button
+            Button {
+                showSourceLanguagePicker.toggle()
+            } label: {
+                HStack(spacing: 4) {
+                    Text(sourceLanguageDisplayText)
+                        .font(.callout)
+                    Image(systemName: "chevron.down")
+                        .font(.caption2)
+                }
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .help("Source languages (select multiple for mixed-language audio)")
+            .popover(isPresented: $showSourceLanguagePicker, arrowEdge: .bottom) {
+                sourceLanguagePickerContent
+            }
+            
+            Image(systemName: "arrow.right")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+            
+            // Target language picker
             Picker("", selection: $targetLanguageRaw) {
                 ForEach(TranslationLanguage.allCases) { lang in
                     Text(lang.displayName).tag(lang.rawValue)
                 }
             }
             .pickerStyle(.menu)
-            .frame(maxWidth: 120)
+            .frame(maxWidth: 100)
+            .help("Target language")
             .onChange(of: targetLanguageRaw) { _, raw in
                 let lang = TranslationLanguage(rawValue: raw) ?? .disabled
                 translationConfig = lang.localeLanguage.map {
-                    TranslationSession.Configuration(source: nil, target: $0)
+                    TranslationSession.Configuration(source: sourceLocaleForConfig, target: $0)
                 }
                 showTranslation = lang != .disabled
-                print("[Translation] 🌐 language picker changed to '\(raw)' — config=\(translationConfig != nil ? "set" : "nil") showTranslation=\(showTranslation)")
+                print("[Translation] 🌐 target language changed to '\(raw)' — config=\(translationConfig != nil ? "set" : "nil") showTranslation=\(showTranslation)")
+            }
+            .onChange(of: sourceLanguagesData) { _, _ in
+                let targetLang = TranslationLanguage(rawValue: targetLanguageRaw) ?? .disabled
+                translationConfig = targetLang.localeLanguage.map {
+                    TranslationSession.Configuration(source: sourceLocaleForConfig, target: $0)
+                }
+                print("[Translation] 🌐 source languages changed — config=\(translationConfig != nil ? "set" : "nil")")
             }
 
             Toggle(isOn: $showTranslation) {
@@ -279,6 +364,72 @@ struct SystemAudioView: View {
             .toggleStyle(.button)
             .disabled(targetLanguageRaw == TranslationLanguage.disabled.rawValue)
         }
+    }
+    
+    // Source language multi-select popover content
+    private var sourceLanguagePickerContent: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Source Languages")
+                .font(.headline)
+            
+            Group {
+                if selectedSourceLanguages.count == 1 {
+                    Label("Single language mode: No popup will appear", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else if selectedSourceLanguages.count > 1 {
+                    Label("Multi-language mode: Auto-detect per segment", systemImage: "wand.and.stars")
+                        .foregroundStyle(.blue)
+                } else {
+                    Label("Auto mode: System will detect (may show popup)", systemImage: "questionmark.circle")
+                        .foregroundStyle(.orange)
+                }
+            }
+            .font(.caption)
+            .padding(.vertical, 4)
+            
+            Divider()
+            
+            ForEach(TranslationLanguage.actualLanguages) { lang in
+                Toggle(isOn: Binding(
+                    get: { selectedSourceLanguages.contains(lang) },
+                    set: { isSelected in
+                        var current = selectedSourceLanguages
+                        if isSelected {
+                            current.insert(lang)
+                        } else {
+                            current.remove(lang)
+                        }
+                        selectedSourceLanguages = current
+                        // Update translation service
+                        translationService.expectedSourceLanguages = current
+                    }
+                )) {
+                    Text(lang.displayName)
+                }
+                .toggleStyle(.checkbox)
+            }
+            
+            Divider()
+            
+            HStack {
+                Button("Clear All") {
+                    selectedSourceLanguages = []
+                    translationService.expectedSourceLanguages = []
+                }
+                .buttonStyle(.borderless)
+                .disabled(selectedSourceLanguages.isEmpty)
+                
+                Spacer()
+                
+                Button("Done") {
+                    showSourceLanguagePicker = false
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            }
+        }
+        .padding()
+        .frame(width: 280)
     }
 
     private var otherSourceRecording: Bool {
