@@ -7,11 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		223FA6647319ED15DF71FB78 /* HotkeyMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = E99D952DC01B67270F3BD15A /* HotkeyMonitor.swift */; };
 		39D91EAA57B39931EE5FDCBB /* AudioNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5131935C82452B95739B4905 /* AudioNormalizer.swift */; };
 		507AFE21F7514246DEE6BF21 /* SummarizationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D035557F404F2B462B40EEB /* SummarizationEngine.swift */; };
 		6E0EA98F9BA1E2568CC581E4 /* TranslationLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698FDA34FFFBA19A2733CE2C /* TranslationLanguage.swift */; };
-		AA0000000000000000000004 /* MLXAudioSTT in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000002 /* MLXAudioSTT */; };
-		AA0000000000000000000005 /* MLXAudioCore in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000003 /* MLXAudioCore */; };
+		80BCE2D677FBDCD39AEBED56 /* DictationSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07960D545A3149F56ECAA5C0 /* DictationSettingsView.swift */; };
+		929013AD626382B352FB3E39 /* DictationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF74056D68ED7A640BCD4AED /* DictationService.swift */; };
 		B01676922F503DB0007D9481 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = B01676912F503DB0007D9481 /* MLXLLM */; };
 		B01676942F503DB0007D9481 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = B01676932F503DB0007D9481 /* MLXLMCommon */; };
 		B01676A02F50D8B4007D9481 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = B016769F2F50D8B4007D9481 /* AppIcon.icon */; };
@@ -45,13 +46,20 @@
 		B10000000000000000000032 /* TranscriptSegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000034 /* TranscriptSegment.swift */; };
 		B10000000000000000000033 /* AudioFileWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000035 /* AudioFileWriter.swift */; };
 		B10000000000000000000034 /* AudioPlayerBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000036 /* AudioPlayerBar.swift */; };
+		B57D22A37B0A8D65C324F62F /* PermissionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 924DD32EAF745D4341D9A2ED /* PermissionManager.swift */; };
+		C729070E2F71360D009AC5FF /* MLXAudioCore in Frameworks */ = {isa = PBXBuildFile; productRef = C729070D2F71360D009AC5FF /* MLXAudioCore */; };
+		C72907102F71360D009AC5FF /* MLXAudioTTS in Frameworks */ = {isa = PBXBuildFile; productRef = C729070F2F71360D009AC5FF /* MLXAudioTTS */; };
+		C72907132F713683009AC5FF /* MLXAudioSTT in Frameworks */ = {isa = PBXBuildFile; productRef = C72907122F713683009AC5FF /* MLXAudioSTT */; };
 		C7ED63182F511D5800662838 /* SmartTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7ED63172F511D5800662838 /* SmartTranslationService.swift */; };
+		FDC9674095C9A46C523CF445 /* PasteManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5D3E600F0AD99D7FB3347C1 /* PasteManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		07960D545A3149F56ECAA5C0 /* DictationSettingsView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DictationSettingsView.swift; sourceTree = "<group>"; };
 		5131935C82452B95739B4905 /* AudioNormalizer.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AudioNormalizer.swift; sourceTree = "<group>"; };
 		698FDA34FFFBA19A2733CE2C /* TranslationLanguage.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TranslationLanguage.swift; sourceTree = "<group>"; };
 		8D035557F404F2B462B40EEB /* SummarizationEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SummarizationEngine.swift; sourceTree = "<group>"; };
+		924DD32EAF745D4341D9A2ED /* PermissionManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PermissionManager.swift; sourceTree = "<group>"; };
 		A10000000000000000000001 /* VoxNoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoxNoteApp.swift; sourceTree = "<group>"; };
 		A10000000000000000000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A10000000000000000000003 /* ModelInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelInfo.swift; sourceTree = "<group>"; };
@@ -84,9 +92,12 @@
 		A10000000000000000000034 /* TranscriptSegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptSegment.swift; sourceTree = "<group>"; };
 		A10000000000000000000035 /* AudioFileWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioFileWriter.swift; sourceTree = "<group>"; };
 		A10000000000000000000036 /* AudioPlayerBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayerBar.swift; sourceTree = "<group>"; };
-		C7ED63172F511D5800662838 /* SmartTranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartTranslationService.swift; sourceTree = "<group>"; };
 		B016769F2F50D8B4007D9481 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		C7ED63172F511D5800662838 /* SmartTranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartTranslationService.swift; sourceTree = "<group>"; };
+		CF74056D68ED7A640BCD4AED /* DictationService.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DictationService.swift; sourceTree = "<group>"; };
 		E10000000000000000000001 /* VoxNote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoxNote.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E99D952DC01B67270F3BD15A /* HotkeyMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HotkeyMonitor.swift; sourceTree = "<group>"; };
+		F5D3E600F0AD99D7FB3347C1 /* PasteManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PasteManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -95,9 +106,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				B01676922F503DB0007D9481 /* MLXLLM in Frameworks */,
-				AA0000000000000000000004 /* MLXAudioSTT in Frameworks */,
+				C72907102F71360D009AC5FF /* MLXAudioTTS in Frameworks */,
 				B01676942F503DB0007D9481 /* MLXLMCommon in Frameworks */,
-				AA0000000000000000000005 /* MLXAudioCore in Frameworks */,
+				C72907132F713683009AC5FF /* MLXAudioSTT in Frameworks */,
+				C729070E2F71360D009AC5FF /* MLXAudioCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -110,6 +122,7 @@
 				C10000000000000000000002 /* VoxNote */,
 				C10000000000000000000014 /* Products */,
 				B016769F2F50D8B4007D9481 /* AppIcon.icon */,
+				C72907112F713683009AC5FF /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -152,6 +165,10 @@
 				8D035557F404F2B462B40EEB /* SummarizationEngine.swift */,
 				5131935C82452B95739B4905 /* AudioNormalizer.swift */,
 				C7ED63172F511D5800662838 /* SmartTranslationService.swift */,
+				E99D952DC01B67270F3BD15A /* HotkeyMonitor.swift */,
+				F5D3E600F0AD99D7FB3347C1 /* PasteManager.swift */,
+				924DD32EAF745D4341D9A2ED /* PermissionManager.swift */,
+				CF74056D68ED7A640BCD4AED /* DictationService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -175,6 +192,7 @@
 				C10000000000000000000010 /* ModelManager */,
 				C10000000000000000000011 /* Shared */,
 				C10000000000000000000012 /* Onboarding */,
+				FF923C7EC28C0971AAC1D506 /* Settings */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -244,6 +262,21 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		C72907112F713683009AC5FF /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		FF923C7EC28C0971AAC1D506 /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				07960D545A3149F56ECAA5C0 /* DictationSettingsView.swift */,
+			);
+			path = Settings;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -261,10 +294,11 @@
 			);
 			name = VoxNote;
 			packageProductDependencies = (
-				AA0000000000000000000002 /* MLXAudioSTT */,
-				AA0000000000000000000003 /* MLXAudioCore */,
 				B01676912F503DB0007D9481 /* MLXLLM */,
 				B01676932F503DB0007D9481 /* MLXLMCommon */,
+				C729070D2F71360D009AC5FF /* MLXAudioCore */,
+				C729070F2F71360D009AC5FF /* MLXAudioTTS */,
+				C72907122F713683009AC5FF /* MLXAudioSTT */,
 			);
 			productName = VoxNote;
 			productReference = E10000000000000000000001 /* VoxNote.app */;
@@ -295,8 +329,8 @@
 			);
 			mainGroup = C10000000000000000000001;
 			packageReferences = (
-				AA0000000000000000000001 /* XCRemoteSwiftPackageReference "mlx-audio-swift" */,
 				B01676902F503DB0007D9481 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
+				C729070C2F71360D009AC5FF /* XCLocalSwiftPackageReference "../mlx-audio-swift-local" */,
 			);
 			productRefGroup = C10000000000000000000014 /* Products */;
 			projectDirPath = "";
@@ -357,6 +391,11 @@
 				507AFE21F7514246DEE6BF21 /* SummarizationEngine.swift in Sources */,
 				39D91EAA57B39931EE5FDCBB /* AudioNormalizer.swift in Sources */,
 				C7ED63182F511D5800662838 /* SmartTranslationService.swift in Sources */,
+				223FA6647319ED15DF71FB78 /* HotkeyMonitor.swift in Sources */,
+				FDC9674095C9A46C523CF445 /* PasteManager.swift in Sources */,
+				B57D22A37B0A8D65C324F62F /* PermissionManager.swift in Sources */,
+				929013AD626382B352FB3E39 /* DictationService.swift in Sources */,
+				80BCE2D677FBDCD39AEBED56 /* DictationSettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -566,15 +605,14 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCRemoteSwiftPackageReference section */
-		AA0000000000000000000001 /* XCRemoteSwiftPackageReference "mlx-audio-swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/Blaizzy/mlx-audio-swift.git";
-			requirement = {
-				branch = main;
-				kind = branch;
-			};
+/* Begin XCLocalSwiftPackageReference section */
+		C729070C2F71360D009AC5FF /* XCLocalSwiftPackageReference "../mlx-audio-swift-local" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "../mlx-audio-swift-local";
 		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCRemoteSwiftPackageReference section */
 		B01676902F503DB0007D9481 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm";
@@ -586,16 +624,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		AA0000000000000000000002 /* MLXAudioSTT */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = AA0000000000000000000001 /* XCRemoteSwiftPackageReference "mlx-audio-swift" */;
-			productName = MLXAudioSTT;
-		};
-		AA0000000000000000000003 /* MLXAudioCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = AA0000000000000000000001 /* XCRemoteSwiftPackageReference "mlx-audio-swift" */;
-			productName = MLXAudioCore;
-		};
 		B01676912F503DB0007D9481 /* MLXLLM */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = B01676902F503DB0007D9481 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
@@ -605,6 +633,19 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B01676902F503DB0007D9481 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;
 			productName = MLXLMCommon;
+		};
+		C729070D2F71360D009AC5FF /* MLXAudioCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MLXAudioCore;
+		};
+		C729070F2F71360D009AC5FF /* MLXAudioTTS */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = MLXAudioTTS;
+		};
+		C72907122F713683009AC5FF /* MLXAudioSTT */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C729070C2F71360D009AC5FF /* XCLocalSwiftPackageReference "../mlx-audio-swift-local" */;
+			productName = MLXAudioSTT;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

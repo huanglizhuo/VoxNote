@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-<dict/>
+<dict>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>VoxNote 需要发送 Apple Events 到 System Events 以实现听写文字粘贴功能。</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>VoxNote 需要访问麦克风以进行语音听写和录音转写。</string>
+</dict>
 </plist>

@@ -7,6 +7,7 @@ struct ContentView: View {
     @EnvironmentObject var deviceManager: AudioDeviceManager
     @EnvironmentObject var captureService: AudioCaptureService
     @EnvironmentObject var noteStore: NoteStore
+    @EnvironmentObject var dictationService: DictationService
 
     @State private var selection: SidebarSelection? = .voxRecord
     @State private var showOnboarding = false
@@ -75,6 +76,12 @@ struct ContentView: View {
                         Text("Recording")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                    }
+
+                    if dictationService.isListening {
+                        Image(systemName: "mic.badge.plus")
+                            .foregroundStyle(.green)
+                            .help("按键听写已启用 (\(dictationService.hotkeyMonitor.selectedTrigger.displayName))")
                     }
 
                     if transcriptionEngine.isModelLoaded {
