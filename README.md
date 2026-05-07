@@ -34,6 +34,18 @@ VoxNote is a macOS app for turning audio into clear notes.
 <img src="assets/screenshot.png" alt="VoxNote Screenshot" width="600" />
 
 
+## Build
+
+Requirements:
+- macOS 15.0+
+- Xcode 26.4+ (with Command Line Tools)
+
+```bash
+make build   # 编译
+make run     # 编译并启动
+make clean   # 清理构建产物
+```
+
 ## TODOs
 
 - [ ] add blackhole usage guide UI.
